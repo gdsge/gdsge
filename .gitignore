@@ -1,0 +1,41 @@
+source/include/Eigen
+source/@sym/*.m
+source/@sym/private/*.m
+
+# For tests
+# Bianchi2011
+tests/Bianchi2011_asg/*
+!tests/Bianchi2011_asg/*.gmod
+!tests/Bianchi2011_asg/test.m
+!tests/Bianchi2011_asg/shock_process.mat
+
+# HL1996
+tests/HeatonLucas1996/*
+!tests/HeatonLucas1996/*.gmod
+!tests/HeatonLucas1996/test.m
+
+# Huggett1997
+tests/Huggett1997/*
+!tests/Huggett1997/*.gmod
+!tests/Huggett1997/test.m
+
+# Cao2016
+tests/CaoKS2016/*
+!tests/CaoKS2016/*.gmod
+!tests/CaoKS2016/test.m
+
+# Mendoza2010
+tests/Mendoza2010/*
+!tests/Mendoza2010/*.gmod
+!tests/Mendoza2010/test.m
+
+# Barro
+tests/Barro_et_al_2017/*
+!tests/Barro_et_al_2017/*.gmod
+!tests/Barro_et_al_2017/test.m
+
+# GLSW 2020
+tests/GLSW2020/*
+!tests/GLSW2020/*.gmod
+!tests/GLSW2020/test.m
+

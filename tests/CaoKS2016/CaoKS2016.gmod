@@ -1,0 +1,148 @@
+% Parameters
+parameters beta delta alpha sigma shock_trans2;
+beta=0.99; % discount factor
+delta=0.025;
+alpha=0.36;
+sigma=1.0;
+NumThreads = feature('numCores');
+PrintFreq = 1;
+SaveFreq = 50;
+USE_ASG=1;
+USE_SPLINE=0;
+AsgMaxLevel=10;
+AsgThreshold = 1e-4;
+TolEq = 1e-4;
+
+% States
+var_state K X;
+XPts = 21;
+XMin=0.0;
+XMax=1.0;
+X=linspace(XMin,XMax,XPts);
+
+KPts = 21;
+KMin=8.0;
+KMax=15.0;
+K=exp(linspace(log(KMin), log(KMax), KPts));
+
+% Shocks
+shock_num = 4;
+
+var_shock z e1 e2 L;
+% Set the length to be shock_num
+z=[0.99 1.01 0.99 1.01];
+L=[0.2944 0.3140 0.2944 0.3140];
+e1=[0.07*2*L(1) 0.07*2*L(2) 0.93*2*L(1) 0.93*2*L(2)];
+e2=[0.93*2*L(1) 0.93*2*L(2) 0.07*2*L(1) 0.07*2*L(2)];
+
+% Any intermediate steps can be done
+EZTrans =  [
+    0.5250, 0.3500, 0.0312, 0.0938;
+    0.0389, 0.8361, 0.0021, 0.1229;
+    0.0938, 0.0312, 0.2917, 0.5833;
+    0.0091, 0.1159, 0.0243, 0.8507
+    ];
+% Convert to Pr((z,e)->(z',e'))
+EZTrans = reshape(EZTrans,[2 2 2 2]);
+ZETrans = permute(EZTrans,[2 1 4 3]);
+ZETrans = reshape(ZETrans,[4 4]);
+shock_trans = ZETrans;
+shock_trans2 = shock_trans;
+
+% Tensor variables
+% var_tensor r w budget1 budget2;
+% Notice use dot operator
+% r = alpha*z.*(K./L).^(alpha-1);
+% w = (1-alpha)*z.*(K./L).^alpha;
+% budget1 = (1-delta+r).*(2*K).*(1-X) + w.*e1;
+% budget2 = (1-delta+r).*(2*K).*X + w.*e2;
+
+var_policy_init c1 c2;
+inbound_init c1 0 100;
+inbound_init c2 0 100;
+model_init;
+  r = alpha*z*(K/L)^(alpha-1);
+  w = (1-alpha)*z*(K/L)^alpha;
+  budget1 = (1-delta+r)*(2*K)*(1-X) + w*e1;
+  budget2 = (1-delta+r)*(2*K)*X + w*e2;
+  
+  equations;
+    c1-budget1;
+    c2-budget2;
+  end;
+end;
+
+% Endogenous variables, bounds, and initial values
+var_policy c1 c2 kp1 kp2 Kp Xp lambda1 lambda2;
+% Set bound of endogenous variable
+inbound c1 0 100;
+inbound c2 0 100;
+inbound kp1 0 10*KMax;
+inbound kp2 0 10*KMax;
+inbound Kp 1e-12 10*KMax;
+inbound Xp 0 1;
+inbound lambda1 0 1;
+inbound lambda2 0 1;
+
+var_interp c1Future c2Future;
+initial c1Future c1;
+initial c2Future c2;
+c1Future = c1;
+c2Future = c2;
+
+var_output Kp Xp kp1 kp2;
+
+model;
+  % Budget constraints
+  r = alpha*z*(K/L)^(alpha-1);
+  w = (1-alpha)*z*(K/L)^alpha;
+  budget1 = (1-delta+r)*(2*K)*(1-X) + w*e1;
+  budget2 = (1-delta+r)*(2*K)*X + w*e2;
+  budget_resid1 = budget1 - kp1 - c1;
+  budget_resid2 = budget2 - kp2 - c2;
+  
+  % Flow marginal utility
+  upC1 = c1^-sigma;
+  upC2 = c2^-sigma;
+  
+  % rhs of the Euler equation
+  rhs1 = lambda1;
+  rhs2 = lambda2;
+  
+  % Variable with prime is future variable
+  rNext' = alpha*z'*(Kp/L')^(alpha-1);
+  
+  [c1Next',c2Next'] = GNDSGE_INTERP_VEC'(Kp,Xp);
+  % The above is equivalent to 
+  % c1Next' = c1Future'(Kp,Xp);
+  % c2Next' = c2Future'(Kp,Xp);
+  
+  % Note how to use the NDSGE_EXPECT operator
+  rhs1 = rhs1 + GNDSGE_EXPECT{ beta*(1-delta+rNext')*c1Next'^(-sigma)/upC1 | shock_trans2 } ;
+  rhs2 = rhs2 + GNDSGE_EXPECT{ beta*(1-delta+rNext')*c2Next'^(-sigma)/upC2 } ;
+  
+  equations;
+    % Budget
+    budget_resid1;
+    budget_resid2;
+    % Evolution of Kp
+    1 - (kp1+kp2)/(Kp*2);
+    % Evolution of Xp
+    Xp - kp2/(Kp*2);
+    1 - rhs1;
+    1 - rhs2;
+    kp1 / (2*Kp) * lambda1;
+    kp2 / (2*Kp) * lambda2;
+  end;
+end;
+
+simulate;
+  num_periods = 10000;
+  num_samples = 100;
+  initial K 10
+  initial X 0.5
+  initial shock 1
+  var_simu kp1 kp2;
+  K' = Kp;
+  X' = Xp;
+end;

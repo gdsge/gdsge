@@ -1,0 +1,2 @@
+    Authors: Jinhui Bai (Version 1.0 - current), jinhui.bai@gmail.com
+             Wenlan Luo (Version 3.0 - current), luowenlan@gmail.com

@@ -1,0 +1,162 @@
+% Created: April-9-2020
+% This model generalize the two-period model in Guerrieri et.al (2020) studying the macro effect of COVID-19 
+% with recurrent shocks to labor supply
+
+% Parameters
+parameters beta rho sigma phi nbar delta Abar;
+beta = 0.99; % discount factor
+rho = 0.75;   % 1/rho intratemporal elasticity
+sigma = 0.5;   % 1/sigma intertemporal elasticity
+phi = 0.2;   % share of sector 1
+nbar = 1;    % normal labor endowment
+delta = 0.5; % fraction of labor endowment during crisis
+Abar = 0.3;  % borrowing limit
+
+SIMU_INTERP = 1;
+SIMU_RESOLVE = 0;
+USE_ASG = 0;
+USE_SPLINE = 1;
+ExtrapOrder = 2;
+INTERP_ORDER = 4;
+
+TolEq = 1e-8;
+SaveFreq = inf;
+PrintFreq = 100;
+SimuSaveFreq = inf;
+SimuPrintFreq = 10000;
+%IterSaveAll = 1;
+
+NumThreads = feature('NumCores');
+
+var_shock n1;
+
+% Shocks
+shock_num = 2;
+pi2 = 0.5; % the pandemic lasts for 2 quarters
+freq = 0.005; %frequency of pandemic: 0.5 percent of the time.
+pi1 = 1 - (freq/(1-freq))*(1-pi2);
+
+shock_trans = [pi1,1-pi1;
+               1-pi2,pi2];
+n1 = [nbar,delta*nbar];
+
+
+% States
+var_state a1;
+
+Ngrid = 301;
+a1_lb = -Abar;
+a1_ub = (1-phi)*Abar/phi;
+a1 = linspace(a1_lb,a1_ub,Ngrid);
+
+% Last period
+var_policy_init c1_shr;
+
+inbound_init c1_shr 0 1;
+
+var_aux_init P1 log_lambda1 log_lambda2;
+
+var_output a1n a2 P1 r c1_shr;
+
+model_init;
+   c1_1 = c1_shr*(phi*n1)/phi;
+   c2_1 = (1-c1_shr)*(phi*n1)/(1-phi);
+   c1_2 = c1_shr*((1-phi)*nbar)/phi;
+   c2_2 = (1-c1_shr)*((1-phi)*nbar)/(1-phi);
+
+   Y = (phi*n1^(1-rho) + (1-phi)*nbar^(1-rho))^(1/(1-rho));
+   
+   lambda1 = (c1_shr/phi*Y)^(-sigma)*(Y/nbar)^rho;
+   lambda2 = ((1-c1_shr)/(1-phi)*Y)^(-sigma)*(Y/nbar)^rho;
+   log_lambda1 = log(lambda1);
+   log_lambda2 = log(lambda2);
+
+   %C1 = (phi^rho*c1_1^(1-rho) + (1-phi)^rho*c1_2^(1-rho))^(1/(1-rho));
+   %C2 = (phi^rho*c2_1^(1-rho) + (1-phi)^rho*c2_2^(1-rho))^(1/(1-rho));
+   %lambda1 = C1^(rho-sigma)*(1-phi)^rho*c1_2^(-rho);
+   %lambda2 = C2^(rho-sigma)*(1-phi)^rho*c2_2^(-rho);
+   
+   % price of good 1
+   P1 = ((c1_1/phi)/(c1_2/(1-phi)))^(-rho);
+   % wage of sector 1
+   W1 = P1;
+
+   budget1_resid = P1*c1_1 + c1_2 - W1*n1 - a1;
+
+  equations;
+     budget1_resid;
+  end;
+end;
+
+var_interp log_lambda1_interp log_lambda2_interp;
+initial log_lambda1_interp log_lambda1;
+initial log_lambda2_interp log_lambda2;
+
+log_lambda1_interp = log_lambda1;
+log_lambda2_interp = log_lambda2;
+
+% Endogenous variables, bounds, and initial values
+var_policy c1_shr a1n mu1 mu2 r;
+inbound c1_shr 0 1;
+inbound a1n -Abar (1-phi)*Abar/phi;
+inbound mu1 0 1;
+inbound mu2 0 1;
+inbound r -0.5 0.5;
+
+% Other equilibrium variables
+var_aux a2 P1 log_lambda1 log_lambda2;
+
+model;
+   a2 = -a1*phi/(1-phi);
+
+   c1_1 = c1_shr*(phi*n1)/phi;
+   c2_1 = (1-c1_shr)*(phi*n1)/(1-phi);
+   c1_2 = c1_shr*((1-phi)*nbar)/phi;
+   c2_2 = (1-c1_shr)*((1-phi)*nbar)/(1-phi);
+
+   Y = (phi*n1^(1-rho) + (1-phi)*nbar^(1-rho))^(1/(1-rho));
+   
+   lambda1 = (c1_shr/phi*Y)^(-sigma)*(Y/nbar)^rho;
+   lambda2 = ((1-c1_shr)/(1-phi)*Y)^(-sigma)*(Y/nbar)^rho;
+   log_lambda1 = log(lambda1);
+   log_lambda2 = log(lambda2);
+
+   % price of good 1
+   P1 = ((c1_1/phi)/(c1_2/(1-phi)))^(-rho);
+   % wage of sector 1
+   W1 = P1;
+
+   log_lambda1Future' = log_lambda1_interp'(a1n);
+   log_lambda2Future' = log_lambda2_interp'(a1n);
+   lambda1Future' = exp(log_lambda1Future');
+   lambda2Future' = exp(log_lambda2Future');
+
+   budget1_resid = P1*c1_1 + c1_2 + a1n/(1+r) - W1*n1 - a1;
+
+   euler_residual = 1 - beta*(1+r) * GNDSGE_EXPECT{lambda1Future'}/lambda1 - mu1;
+   euler_residua2 = 1 - beta*(1+r) * GNDSGE_EXPECT{lambda2Future'}/lambda2 - mu2;
+ 
+   a2n = -a1n*phi/(1-phi);
+   slackness1 = mu1*(a1n + Abar);
+   slackness2 = mu2*(a2n + Abar);
+
+  equations;
+     budget1_resid;
+     euler_residual;
+     euler_residua2;
+     slackness1;
+     slackness2;
+  end;
+end;
+
+simulate;
+  num_periods = 10000;
+  num_samples = 20;
+  initial a1 0;
+  initial shock 1;
+  
+  var_simu a2 P1 r c1_shr;
+
+  a1' = a1n;
+
+end;

@@ -1,0 +1,3 @@
+%        S. Bellavia, M. Macconi, S. Pieraccini, "Constrained Dogleg methods
+%              for nonlinear systems with simple bounds", 
+%              COAP,  Vol. 53, pp. 771-794, 2012 

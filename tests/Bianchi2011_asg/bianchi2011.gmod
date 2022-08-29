@@ -1,0 +1,109 @@
+% Toolbox options
+USE_ASG=1; USE_SPLINE=0;
+AsgMaxLevel = 14;
+AsgThreshold = 1e-5;
+
+% Parameters
+parameters r sigma eta kappaN kappaT omega beta;
+r = 0.04;
+sigma = 2;
+eta = 1/0.83 - 1;
+kappaN = 0.32;
+kappaT = 0.32;
+omega = 0.31;
+beta = 0.91;
+
+% States
+var_state b;
+bPts = 101;
+bMin=-0.5;
+bMax=0.0;
+b=linspace(bMin,bMax,bPts);
+
+% Shocks
+var_shock yT yN;
+yPts = 4;
+shock_num=16;
+
+yTEpsilonVar = 0.00219;
+yNEpsilonVar = 0.00167;
+rhoYT = 0.901;
+rhoYN = 0.225;
+
+[yTTrans,yT] = markovappr(rhoYT,yTEpsilonVar^0.5,1,yPts);
+[yNTrans,yN] = markovappr(rhoYN,yNEpsilonVar^0.5,1,yPts);
+
+shock_trans = kron(yNTrans,yTTrans);
+[yT,yN] = ndgrid(yT,yN);
+yT = exp(yT(:)');
+yN = exp(yN(:)');
+
+% Define the last-period problem
+var_policy_init dummy;
+inbound_init dummy -1.0 1.0;
+
+var_aux_init c lambda;
+model_init;
+  cT = yT + b*(1+r);
+  cN = yN;
+  c = (omega*cT^(-eta) + (1-omega)*cN^(-eta))^(-1/eta);
+  partial_c_partial_cT = (omega*cT^(-eta) + (1-omega)*cN^(-eta))^(-1/eta-1) * omega * cT^(-eta-1);
+  lambda = c^(-sigma)*partial_c_partial_cT;
+  
+  equations;
+    0;
+  end;
+end;
+
+% Implicit state transition functions
+var_interp lambda_interp;
+initial lambda_interp lambda;
+lambda_interp = lambda;
+
+% Endogenous variables, bounds, and initial values
+var_policy nbNext mu cT pN;
+inbound nbNext 0.0 10.0;
+inbound mu 0.0 1.0;
+inbound cT 0.0 10.0;
+inbound pN 0.0 10.0;
+
+var_aux c lambda bNext;
+var_output bNext pN c;
+
+model;
+  % Non tradable market clear
+  cN = yN;
+
+  % Transform variables
+  bNext = nbNext - (kappaN*pN*yN + kappaT*yT);
+  % Interp future values
+  lambdaFuture' = lambda_interp'(bNext);
+  
+  % Calculate Euler residuals
+  c = (omega*cT^(-eta) + (1-omega)*cN^(-eta))^(-1/eta);
+  partial_c_partial_cT = (omega*cT^(-eta) + (1-omega)*cN^(-eta))^(-1/eta-1) * omega * cT^(-eta-1);
+  lambda = c^(-sigma)*partial_c_partial_cT;
+  euler_residual = 1 - beta*(1+r) * GNDSGE_EXPECT{lambdaFuture'}/lambda - mu;
+  
+  % Price consistent
+  price_consistency = pN - ((1-omega)/omega)*(cT/cN)^(eta+1);
+  
+  % budget constraint
+  budget_residual = b*(1+r)+yT+pN*yN - (bNext+cT+pN*cN);
+  
+  equations;
+    euler_residual;
+    mu*nbNext;
+    price_consistency;
+    budget_residual;
+  end;
+end;
+
+simulate;
+  num_periods = 1000;
+  num_samples = 100;
+  initial b 0.0
+  initial shock 1;
+  var_simu c pN;
+  b' = bNext;
+end;

@@ -1,0 +1,170 @@
+% Parameters
+parameters gamma sigma omega beta alpha eta delta a phi kappa tau;
+parameters flow_scale;
+
+beta    = 0.92;     % Discount factor
+sigma   = 2;        % CRRA
+omega   = 1.846;    % Labor elasticity
+gamma   = 0.306;    % Capital share
+alpha   = 0.592;    % Labor share
+eta     = 0.102;    % Intermediate share
+delta   = 0.088;    % Depreciation rate
+a       = 2.75;     % Capital adjustment cost
+phi     = 0.26;     % Working capital exernal finance share
+kappa   = 0.2;      % Tightness of collateral constraint
+tau     = 0.17;     % Consumption tax
+
+flow_scale = 1e4;   % Budget normalization factor
+
+% Toolbox options
+PrintFreq = 10; 
+SaveFreq = inf;
+SIMU_RESOLVE=0; SIMU_INTERP=1; % Use interp for fast simulation
+
+% Shocks
+var_shock A R p;
+shock_num = 8;
+% Markov process of shocks (from Mendoza AER (2010):
+% Transition probability matrix
+shock_trans =  [0.51363285, 0.16145114, 0.07773228, 0.02443373, 0.16145114, 0.03201937, 0.02443373, 0.00484575;...
+                0.03201937, 0.64306463, 0.00484575, 0.09732026, 0.16145114, 0.03201937, 0.02443373, 0.00484575;...
+                0.07773228, 0.02443373, 0.51363285, 0.16145114, 0.02443373, 0.00484575, 0.16145114, 0.03201937;...
+                0.00484575, 0.09732026, 0.03201937, 0.64306463, 0.02443373, 0.00484575, 0.16145114, 0.03201937;...
+                0.03201937, 0.16145114, 0.00484575, 0.02443373, 0.64306463, 0.03201937, 0.09732026, 0.00484575;...
+                0.03201937, 0.16145114, 0.00484575, 0.02443373, 0.16145114, 0.51363285, 0.02443373, 0.07773228;...
+                0.00484575, 0.02443373, 0.03201937, 0.16145114, 0.09732026, 0.00484575, 0.64306463, 0.03201937;...
+                0.00484575, 0.02443373, 0.03201937, 0.16145114, 0.02443373, 0.07773228, 0.16145114, 0.51363285];
+% Values of the stochastic process
+AMean = 7 % Scale to match average output with SCU preference in Mendoza (2010)
+A = AMean*[0.986595988257; 1.013404011625; 0.986595988257; 1.013404011625; 0.986595988257; 1.013404011625; 0.986595988257; 1.013404011625];
+R = [1.064449652804; 1.064449652804; 1.064449652804; 1.064449652804; 1.106970405389; 1.106970405389; 1.106970405389; 1.106970405389];
+p = [0.993455002946; 0.993455002946; 1.062225686321; 1.062225686321; 0.993455002946; 0.993455002946; 1.062225686321; 1.062225686321];
+
+% State
+var_state cTilde k;
+
+cTilde_min = 100;
+cTilde_max = 300;
+cTilde_shift = 10;
+cTilde_pts = 30;
+cTilde = linspace(cTilde_min,cTilde_max,cTilde_pts);
+
+k_min = 600;
+k_max = 900;
+k_shift = 10;
+k_pts = 30;
+k = linspace(k_min,k_max,k_pts);
+
+% Initial period
+var_policy_init L v;
+inbound_init L 0 1000;
+inbound_init v 0 1000;
+
+var_aux_init flow q d;
+
+model_init;
+  % Some trivial equations
+  w = L^(omega-1)*(1+tau);
+  Y = A* k^gamma * L^alpha * v^eta;
+  F_1 = gamma*Y/k;
+  F_2 = alpha*Y/L;
+  F_3 = eta*Y/v;
+  
+  NL = L^omega/omega;
+  flow = Y - p*v - phi*(R-1)*(w*L+p*v) - NL*(1+tau);
+  
+  lambda = cTilde^(-sigma);
+  q = 1;
+  d = F_1-delta;
+  
+  equations;
+    F_2 - w*(1+phi*(R-1));
+    F_3 - p*(1+phi*(R-1));
+  end;
+end;
+
+% Interpolation
+var_interp flow_interp q_plus_d_interp;
+% Initial
+initial flow_interp flow/flow_scale;
+initial q_plus_d_interp q + d;
+% Transition
+flow_interp = flow/flow_scale;
+q_plus_d_interp = q + d;
+
+% Policy
+ADAPTIVE_FACTOR = 1.5;
+var_policy L v mu nbNext kNext cTildeNext[8];
+inbound L 0 1000 adaptive(ADAPTIVE_FACTOR);
+inbound v 0 1000 adaptive(ADAPTIVE_FACTOR);
+inbound mu 0 1;
+inbound nbNext 0 2000 adaptive(ADAPTIVE_FACTOR);
+inbound kNext 0 1000 adaptive(ADAPTIVE_FACTOR);
+inbound cTildeNext 0.0 500 adaptive(ADAPTIVE_FACTOR);
+
+% Extra variables returned
+var_aux lambda flow q d;
+var_output cTildeNext kNext;
+
+model;
+  % Output and marginal product
+  Y = A* k^gamma * L^alpha * v^eta;
+  F_1 = gamma*Y/k;
+  F_2 = alpha*Y/L;
+  F_3 = eta*Y/v;
+  w = L^(omega-1)*(1+tau);
+  
+  % Some calculations
+  lambda = cTilde^(-sigma)/(1+tau);
+  inv = kNext - k*(1-delta) + a/2*(kNext-k)^2/k;
+  q = 1+a*(kNext-k)/k;
+  d = F_1 - delta + a/2*(kNext-k)^2/(k^2);
+  qb = 1/R;
+  
+  % Transform back bNext
+  bNext = (nbNext + phi*R*(w*L+p*v) - kappa*q*kNext)/qb;
+  
+  % Interpolation
+  [flow_future',q_plus_d_future'] = GNDSGE_INTERP_VEC'(cTildeNext',kNext);
+  flow_future' = flow_future'*flow_scale;
+
+  % some named equations
+  lambda_future' = cTildeNext'^(-sigma)/(1+tau);
+  euler_bond_residual = -1 + mu + beta*GNDSGE_EXPECT{lambda_future'}/(qb*lambda);
+  euler_capital_residual = -1 + kappa*mu + beta*GNDSGE_EXPECT{lambda_future'*q_plus_d_future'}/(q*lambda);
+  % consistency equation
+  cTilde_consis' = flow_future' + bNext - cTildeNext'*(1+tau);
+  
+  % Extra variables returned
+  NL = L^omega/omega;
+  flow = Y - p*v - phi*(R-1)*(w*L+p*v) - qb*bNext - inv - NL*(1+tau);
+  c = cTilde + NL;
+  b = cTilde*(1+tau) - flow;
+  gdp = Y-p*v;
+  b_gdp = b / gdp;
+  nx = qb*bNext - b + phi*(R-1)*(w*L+p*v);
+  nx_gdp = nx / gdp;
+  lev = (qb*bNext-phi*R*(w*L+p*v)) / (q*kNext);
+  wkcptl = phi*(w*L+p*v);
+  
+  equations;
+    euler_bond_residual;
+    nbNext*mu;
+    euler_capital_residual;
+    F_2 - w*(1+phi*(R-1)+mu*phi*R);
+    F_3 - p*(1+phi*(R-1)+mu*phi*R);
+    cTilde_consis';
+  end;
+end;
+
+simulate;
+  num_periods = 50000;
+  num_samples = 24;
+  initial cTilde 200;
+  initial k 800;
+  initial shock ceil(shock_num/2);
+  
+  var_simu c Y q inv b mu bNext v nx gdp b_gdp nx_gdp lev wkcptl;
+  cTilde' = cTildeNext';
+  k' = kNext;
+end;

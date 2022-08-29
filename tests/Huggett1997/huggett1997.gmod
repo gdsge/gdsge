@@ -1,0 +1,96 @@
+% Toolbox options
+INTERP_ORDER = 4; ExtrapOrder = 4;
+SIMU_RESOLVE = 0; SIMU_INTERP = 1;
+SaveFreq = inf; PrintFreq = 100;
+TolEq = 1e-6;
+% Parameters
+parameters beta sigma kMin r w;
+beta = 0.96;    % discount factor
+sigma = 1.5;    % CRRA coefficient
+alpha = 0.36;   % capital share in production
+delta = 0.1;    % depreciation rate
+
+% States
+var_state k;
+kPts = 100;
+kMin = 0;
+kMax = 20;
+kShift = 1e-3;
+k = exp(linspace(log(kMin+1e-3),log(kMax+1e-3),kPts)) - 1e-3;
+
+% Shock process in Huggett (1997)
+var_shock e;
+e = [0.8, 1.2];
+shock_num = 2;
+shock_trans = [0.5,0.5;0.5,0.5];
+
+% Representative-agent steady state
+kSs = ( (1/beta+delta-1) / alpha )^(1/(alpha-1));
+% Initial prices
+r = alpha*kSs^(alpha-1) - delta;
+w = (1-alpha)*kSs^alpha;
+
+% State transition functions
+var_interp Evp_interp;
+initial Evp_interp (k.*(1+r)+e.*w).^(-sigma);
+% Update
+Evp_interp = shock_trans*vp;
+
+% Endogenous variables
+var_policy k_next lambda;
+inbound k_next kMin k.*(1+r)+e.*w;
+inbound lambda 0 1.0;
+
+% Other variables
+var_aux c vp;
+% Used in simulation
+var_output c k_next;
+var_others kSs alpha delta output_interp_t;
+
+TASK = 'ss';    % Default task, need overwritten
+output_interp_t = {};      % Default transition path;
+pre_iter;
+  % The pre_iter block will be called at the beginning of every policy iteration
+  switch TASK
+    case 'ss'
+    case 'transition'
+      t = T - GNDSGE_Iter + 1;  % Convert forward to backward
+      r = r_t(t);
+      w = w_t(t);
+  end
+end;
+
+model;
+  budget = k*(1+r) + e*w;
+  c = budget - k_next;
+  up = c^(-sigma);
+  [Evp_future] = GDSGE_INTERP_VEC(shock,k_next);
+  euler_residual = -1 + beta*Evp_future/up + lambda;
+  vp = up*(1+r);    % Envelope theorem
+  
+  equations;
+    euler_residual;
+    lambda*(k_next-kMin);
+  end;
+end;
+
+post_iter;
+  % The post_iter block will be called at the end of every policy iteration
+  switch TASK
+    case 'transition'
+      % The following code constructs function approximation for  var_output
+      % and stores in IterRslt.output_interp
+      OUTPUT_CONSTRUCT_CODE;
+      % Store the period-t equilbrium object
+      output_interp_t{t} = IterRslt.output_interp;
+  end
+end;
+
+simulate;
+  num_periods = 1;
+  num_samples = 10000;
+  initial k kSs;    % A place holder
+  initial shock 1;  % A place holder
+  var_simu c;
+  k' = k_next;
+end;
