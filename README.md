@@ -31,7 +31,7 @@ Then, acquire the source code by cloning the git repository:
 git clone https://github.com/gdsge/gdsge
 ```
 
-Finally, in MATLAB, locate folder gdsge/tests, run
+Finally, in MATLAB, change directory to gdsge/tests, run
 
 ```matlab
 runtests
@@ -43,9 +43,7 @@ which runs all the tests and produce all results in the companion paper [Cao, Lu
 
 GDSGE is released under the Apache License, Version 2.0,  which is available at http://www.apache.org/licenses/LICENSE-2.0. In short, this license allows you to use, compose and distribute the GDSGE compiler or generated codes freely. However, it is requested that the companion paper be cited:
 
-```
-Cao, Dan and Luo, Wenlan and Nie, Guangyu, Global DSGE Models (April 1, 2020). Available at SSRN: https://ssrn.com/abstract=3569013 or http://dx.doi.org/10.2139/ssrn.3569013
-```
+​	Cao, Dan and Luo, Wenlan and Nie, Guangyu, Global DSGE Models (April 1, 2020). Available at SSRN: https://ssrn.com/abstract=3569013 or http://dx.doi.org/10.2139/ssrn.3569013
 
 GDSGE relies on the following external libraries, with their licenses described below and attached under folder licenses/:
 
