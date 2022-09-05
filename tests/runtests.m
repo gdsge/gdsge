@@ -1,4 +1,5 @@
 clear;
+rng('default'); % add this line to accommodate older version of MATLAB
 addpath ../source
 testList = {
     'HeatonLucas1996'

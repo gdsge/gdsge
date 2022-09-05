@@ -6,8 +6,10 @@ rng(0823);
 SimuRslt = simulate_HL1996(IterRslt);
 
 % Policy functions
+%{
 figure;
 plot(IterRslt.var_state.w1, IterRslt.var_policy.c1,'LineWidth',1.5);
+%}
 
 figure; subplot(3,1,1);
 plot(IterRslt.var_state.w1, IterRslt.var_policy.ms1(1,:),'LineWidth',1.5);

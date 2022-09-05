@@ -30,13 +30,10 @@ yNEpsilonVar = 0.00167;
 rhoYT = 0.901;
 rhoYN = 0.225;
 
-[yTTrans,yT] = markovappr(rhoYT,yTEpsilonVar^0.5,1,yPts);
-[yNTrans,yN] = markovappr(rhoYN,yNEpsilonVar^0.5,1,yPts);
-
-shock_trans = kron(yNTrans,yTTrans);
-[yT,yN] = ndgrid(yT,yN);
-yT = exp(yT(:)');
-yN = exp(yN(:)');
+% shocks are just placeholders; will overwrite
+shock_trans = zeros(shock_num,shock_num);
+yT = ones(1,shock_num);
+yN = ones(1,shock_num);
 
 % Define the last-period problem
 var_policy_init dummy;

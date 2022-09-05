@@ -16,7 +16,7 @@ SIMU_INTERP = 1;
 SIMU_RESOLVE = 0;
 USE_ASG = 0;
 USE_SPLINE = 1;
-ExtrapOrder = 2;
+EXTRAP_ORDER = 2;
 INTERP_ORDER = 4;
 
 TolEq = 1e-8;
