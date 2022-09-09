@@ -45,6 +45,8 @@ void TASK_NAME(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 #pragma omp parallel for schedule(dynamic)
 	for (int GDSGE_I = 1; GDSGE_I <= GDSGE_NPROB; GDSGE_I++)
 	{
+        START_LOOP_CODE;
+        
     GDSGE_F(GDSGE_I) = GDSGE_F0(GDSGE_I);
     if (GDSGE_SKIP(GDSGE_I) == 1)
     { 
@@ -76,5 +78,7 @@ void TASK_NAME(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     MODEL_CODE;
     
     CALL_FMIN_CODE;
+    
+    FINISH_LOOP_CODE;
 	}
 }

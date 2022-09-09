@@ -77,15 +77,6 @@ title('State Transformation of Current Bond');
 figure;
 [cTilde_mesh,k_mesh] = ndgrid(IterRslt.var_state.cTilde,IterRslt.var_state.k);
 surf(squeeze(IterRslt.var_aux.b(1,:,:)),k_mesh,cTilde_mesh);
-xlabel('b');
-ylabel('k');
-title('\tilde{c}');
-% view(-6.46,8.88);
-% print('figures/policy_cTilde.png');
-
-figure;
-[cTilde_mesh,k_mesh] = ndgrid(IterRslt.var_state.cTilde,IterRslt.var_state.k);
-surf(squeeze(IterRslt.var_aux.b(1,:,:)),k_mesh,cTilde_mesh);
 xlabel('$b$','interpreter','latex','FontSize',16);
 ylabel('$k$','interpreter','latex','FontSize',16);
 % zlabel('$\tilde{c}$','interpreter','latex','FontSize',16);
@@ -95,7 +86,7 @@ zlim([100,250]);
 % view(-0.06,90);
 % print('figures/policy_cTilde_feasible.png','-dpng','-r300');
 
-%%%%%%%% Nonlierality
+%%%%%%%% Nonlinearality
 
 figure;
 [cTilde_mesh,k_mesh] = ndgrid(IterRslt.var_state.cTilde,IterRslt.var_state.k);

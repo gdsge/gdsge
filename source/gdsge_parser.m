@@ -50,6 +50,34 @@ for i=1:length(cincludeList)
     code = strrep(code,includeString{i},'');
 end
 
+%% Process macro: cinclude<>
+cincludeList = regexp(code,'(?<=(\n|^)[\s]*)cinclude \<');
+includeString = cell(1,length(cincludeList));
+cxxIncludeString = '';
+for i=1:length(cincludeList)
+    % Find the closing bracket
+    locStart = cincludeList(i);
+    locEnd = locStart;
+    while code(locEnd)~='>'
+        locEnd = locEnd+1;
+    end
+    if code(locEnd+1)==';'
+        locEnd = locEnd+1;
+    end
+    includeString{i} = code(locStart:locEnd);
+    % Get the file inside the bracket
+    includeName = regexp(includeString{i},'(?<=<).*(?=>)','match');
+    % Construct include strings in cxx
+    if ~isempty(includeName)
+        cxxIncludeString = [cxxIncludeString, ...
+            '#include <', includeName{1}, '>', LINE_BREAK, ...
+            ];
+    end
+end
+for i=1:length(cincludeList)
+    code = strrep(code,includeString{i},'');
+end
+
 %% Process macro: include
 allIncludeStrings = regexp(code,'(?<=(\n|^)[\s]*)include\(');
 includeString = cell(1,length(allIncludeStrings));
@@ -160,6 +188,8 @@ code = process_if_macro(code);
 %% Extract blocks
 % [equationCode, code] = extract_equation_segment(code);
 [preModelCode,code] = extract_segment(code,'pre_model;');
+[startLoopCode,code] = extract_segment(code,'start_loop;');
+[finishLoopCode,code] = extract_segment(code,'finish_loop;');
 [modelCodes,modelConditionCodes,equationCodes,code] = extract_model_segment(code,'model',1);
 [modelInitCodes,modelInitConditionCodes,equationInitCodes,code] = extract_model_segment(code,'model_init',0);
 [simulateCode,code] = extract_simulate_segment(code);
@@ -168,6 +198,7 @@ code = process_if_macro(code);
 [postIterCode,code] = extract_segment(code,'post_iter;');
 [preInfCode,code] = extract_segment(code,'pre_inf;');
 [postSolCode,code] = extract_segment(code,'post_sol;');
+[preCallMexCode,code] = extract_segment(code,'pre_call_mex;');
 [postCallMexCode,code] = extract_segment(code,'post_call_mex;');
 [preMinorCode,code] = extract_segment(code,'pre_minor;');
 [preUpdateCode,code] = extract_segment(code,'pre_update;');
@@ -1269,6 +1300,9 @@ for ii = 1:length(var_interp_name_expanded)
 end
 preModelAllCode = [preModelDeclareCode,LINE_BREAK,preModelCode];
 
+startLoopCode = gen_cxx_model_code_no_var_aux_inline(startLoopCode,'');
+finishLoopCode = gen_cxx_model_code_no_var_aux_inline(finishLoopCode,'');
+
 if num_policy_init>0
     gen_cxx_model_init_code_inline = @(modelCode,equationCode) gen_cxx_model_code(modelCode,equationCode,...
         0,{},num_policy_init,var_policy_init_name,num_policy_init_total,var_policy_init_length,var_policy_init_loc,...
@@ -1432,6 +1466,7 @@ matlabCode = my_regexprep(matlabCode,'PRE_CODE',setParamsCode);
 matlabCode = my_regexprep(matlabCode,'ASSERT_CODE',assertCode);
 matlabCode = my_regexprep(matlabCode,'PRE_MINOR_CODE',preMinorCode);
 matlabCode = my_regexprep(matlabCode,'POST_SOL_CODE',postSolCode);
+matlabCode = my_regexprep(matlabCode,'PRE_CALL_MEX',preCallMexCode);
 matlabCode = my_regexprep(matlabCode,'POST_CALL_MEX',postCallMexCode);
 
 matlabCode = my_regexprep(matlabCode,'TENSOR_CONSTRUCT_CODE',tensorConstructCode);
@@ -1700,6 +1735,8 @@ cppCode = regexprep(cppCode,'GDSGE_OTHER_INCLUDE',cxxIncludeString);
 % init
 taskInitCode = fileread([template_folder '/task_template.cpp']);
 taskInitCode = my_regexprep(taskInitCode,'PRE_MODEL_CODE','');
+taskInitCode = my_regexprep(taskInitCode,'START_LOOP_CODE','');
+taskInitCode = my_regexprep(taskInitCode,'FINISH_LOOP_CODE','');
 taskInitCode = my_regexprep(taskInitCode,'MODEL_CODE',modelAllInitCodes);
 taskInitCode = my_regexprep(taskInitCode,'CALL_FMIN_CODE;',callFMinInitCodes);
 taskInitCode = my_regexprep(taskInitCode,'NUM_EQUATIONS',num2str(num_equations_init));
@@ -1713,6 +1750,8 @@ cppCode = regexprep(cppCode,'TASK_INIT_CODE',taskInitCode);
 % init
 taskInfHorizonCode = fileread([template_folder '/task_template.cpp']);
 taskInfHorizonCode = my_regexprep(taskInfHorizonCode,'PRE_MODEL_CODE',preModelAllCode);
+taskInfHorizonCode = my_regexprep(taskInfHorizonCode,'START_LOOP_CODE',startLoopCode);
+taskInfHorizonCode = my_regexprep(taskInfHorizonCode,'FINISH_LOOP_CODE',finishLoopCode);
 taskInfHorizonCode = my_regexprep(taskInfHorizonCode,'MODEL_CODE',modelAllCodes);
 taskInfHorizonCode = my_regexprep(taskInfHorizonCode,'CALL_FMIN_CODE;',callFMinCodes);
 taskInfHorizonCode = my_regexprep(taskInfHorizonCode,'NUM_EQUATIONS',num2str(num_equations));
@@ -2058,11 +2097,11 @@ while j<length(lines)
         
         if strcmp(words{1},'cxx;')
             % Begin a cxx block
-            % Find the next end
+            % Find the next end or cxxend;
             line = '';
             words = strsplit(line,{' '});
             firstWord = words{1};
-            while ~strcmp(firstWord,'end;')
+            while ~strcmp(firstWord,'endcxx;')
                 modelCode = [modelCode, line, LINE_BREAK];
                 j = j+1;
                 line = lines{j};
