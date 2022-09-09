@@ -53,7 +53,6 @@ end
 %% Process macro: cinclude<>
 cincludeList = regexp(code,'(?<=(\n|^)[\s]*)cinclude \<');
 includeString = cell(1,length(cincludeList));
-cxxIncludeString = '';
 for i=1:length(cincludeList)
     % Find the closing bracket
     locStart = cincludeList(i);
@@ -190,6 +189,8 @@ code = process_if_macro(code);
 [preModelCode,code] = extract_segment(code,'pre_model;');
 [startLoopCode,code] = extract_segment(code,'start_loop;');
 [finishLoopCode,code] = extract_segment(code,'finish_loop;');
+[preJacCode,code] = extract_segment(code,'pre_jac_code;');
+[postJacCode,code] = extract_segment(code,'post_jac_code;');
 [modelCodes,modelConditionCodes,equationCodes,code] = extract_model_segment(code,'model',1);
 [modelInitCodes,modelInitConditionCodes,equationInitCodes,code] = extract_model_segment(code,'model_init',0);
 [simulateCode,code] = extract_simulate_segment(code);
@@ -1286,10 +1287,16 @@ gen_cxx_model_code_inline = @(modelCode,equationCode) gen_cxx_model_code(modelCo
     var_aux_name, var_aux_length, num_shock_var,var_shock_name,shock_num,LINE_BREAK);
 [modelAllCodes,callFMinCodes,num_equations] = process_model_code(modelCodes,equationCodes,modelConditionCodes,gen_cxx_model_code_inline,...
     headerAuxAssignCode,template_folder,USE_FINITE_DIFF,LINE_BREAK);
+% patch it right way
+
 
 gen_cxx_model_code_no_var_aux_inline = @(modelCode,equationCode) gen_cxx_model_code(modelCode,equationCode,...
     num_interp,var_interp_name,num_policy,var_policy_name,num_policy_total,var_policy_length,var_policy_loc,...
     {''}, 0, num_shock_var,var_shock_name,shock_num,LINE_BREAK);
+preJacCode = gen_cxx_model_code_no_var_aux_inline(preJacCode,'');
+postJacCode = gen_cxx_model_code_no_var_aux_inline(postJacCode,'');
+modelAllCodes = my_regexprep(modelAllCodes, 'PRE_JAC_CODE', preJacCode);
+modelAllCodes = my_regexprep(modelAllCodes, 'POST_JAC_CODE', postJacCode);
 [preModelCode,~,~,preModelDeclareCode] = gen_cxx_model_code_no_var_aux_inline(preModelCode,'');
 preModelCode = regexprep(preModelCode,'((?<=^)|(?<=\W)|(?<=_))adouble(?=\W)','double');
 % Manually process preModelCode
@@ -1309,6 +1316,9 @@ if num_policy_init>0
         var_aux_init_name, var_aux_init_length, num_shock_var,var_shock_name,shock_num,LINE_BREAK);
     [modelAllInitCodes,callFMinInitCodes,num_equations_init] = process_model_code(modelInitCodes,equationInitCodes,modelInitConditionCodes,gen_cxx_model_init_code_inline,...
         headerAuxInitAssignCode,template_folder,USE_FINITE_DIFF,LINE_BREAK);
+    
+    modelAllInitCodes = my_regexprep(modelAllInitCodes, 'PRE_JAC_CODE', '');
+    modelAllInitCodes = my_regexprep(modelAllInitCodes, 'POST_JAC_CODE', '');
 else
     modelAllInitCodes='';
     callFMinInitCodes='';

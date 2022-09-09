@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Changelog
-- Following blocks with snippets added to mex_xxx.cpp: start_loop, finish_loop
-- Following blocks with snippets added to iter_xxx.cpp: pre_mex_call
+- cinclude <> 
+- Blocks with snippets added to mex_xxx.cpp: start_loop, finish_loop
+- Blocks with snippets added to iter_xxx.cpp: pre_mex_call, pre_jac_code, post_jac_code
 
 ## Changed
 

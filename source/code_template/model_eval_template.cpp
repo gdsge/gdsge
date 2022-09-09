@@ -1,4 +1,4 @@
-        auto GDSGE_OBJ_MODEL_NUMBER = [GDSGE_FUNC_MODEL_NUMBER_adouble, GDSGE_FUNC_MODEL_NUMBER_double, &_stack,&GDSGE_EVAL_GRAD_FLAG,FiniteDiffDelta](double* GDSGE_x, double* GDSGE_f, double* GDSGE_jac)
+        auto GDSGE_OBJ_MODEL_NUMBER = [&](double* GDSGE_x, double* GDSGE_f, double* GDSGE_jac)
 		{
             if (GDSGE_jac == 0)
             {
@@ -59,9 +59,12 @@
                         }
                     }
                     // Calculate jacobian
+                    
+                    PRE_JAC_CODE
                     _stack.independent(&GDSGE_x_adept[0], NUM_EQUATIONS);
                     _stack.dependent(&GDSGE_EQ[0], NUM_EQUATIONS);
                     _stack.jacobian_forward_vec(GDSGE_jac);
+                    POST_JAC_CODE
                 #endif
             }
 		};
