@@ -11,7 +11,9 @@ See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 ## Requirements for running codes compiled remotely
 
 * Windows / macOS
+
 * MATLAB ver>=2017b. MATLAB toolbox: Curve Fitting
+
 * Upload your gmod file following the instruction here: [GDSGE: A Toolbox for Solving DSGE Models with Global Methods — GDSGE Homepage](http://www.gdsge.com/)
 
 ## Requirements for the local compiler
