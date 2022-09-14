@@ -1,2 +1,9 @@
-    Authors: Jinhui Bai (Version 1.0 - current), jinhui.bai@gmail.com
-             Wenlan Luo (Version 3.0 - current), luowenlan@gmail.com
+Copyright (C) 2014 Jinhui Bai and Wenlan Luo
+
+Authors: Jinhui Bai (Version 1.0 - current), jinhui.bai@gmail.com
+         Wenlan Luo (Version 3.0 - current), luowenlan@gmail.com
+Version History:
+Version 3.0 in progress: last update, 05/09/2014
+version 2.0: 11/26/2013. Major revision: introduces "spline dimension reduction" feature both for cell form and matrix form
+version 1.1: 11/23/2011. Minor revision: transform formats between base MATLAB splines and Curve Fitting Toolbox
+version 1.0: 10/15/2008. Major release with "flexible vector dimension selection" and "table look-up index" features

@@ -6,18 +6,23 @@ GDSGE is a toolbox that solves nonlinear Dynamic Stochastic General Equilibrium 
 
 The toolbox can be used to solve models in macroeconomics, international finance, asset pricing, and related fields.
 
-## Requirements for running remote compiled code
+See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 
-* MATLAB ver>=2017b. MATLAB toolbox: curve fitting
+## Requirements for running codes compiled remotely
+
+* Windows / macOS
+* MATLAB ver>=2017b. MATLAB toolbox: Curve Fitting
 * Upload your gmod file following the instruction here: [GDSGE: A Toolbox for Solving DSGE Models with Global Methods — GDSGE Homepage](http://www.gdsge.com/)
 
-## Requirements for local compiler
+## Requirements for the local compiler
 
-* MATLAB ver>=2017b. MATLAB toolboxes: symbolic math, curve fitting
+* Windows / macOS
 
-* Visual C++ 2019 / Intel C++ Compiler 2017 or other MATLAB-compatible compilers. 
+* MATLAB ver>=2017b. MATLAB toolboxes: Symbolic Math, Curve Fitting
 
-## Installation of local compiler
+* Visual C++ 2019 / Intel C++ Compiler 2017 or other MATLAB-compatible C++ compilers
+
+## Installation of the local compiler
 
 First, Configure your mex C++ compiler by running in MATLAB
 
@@ -27,7 +32,7 @@ First, Configure your mex C++ compiler by running in MATLAB
 
 Then, acquire the source code by cloning the git repository:
 
-```
+```git
 git clone https://github.com/gdsge/gdsge
 ```
 
@@ -43,7 +48,7 @@ which runs all the tests and produce all results in the companion paper [Cao, Lu
 
 GDSGE is released under the Apache License, Version 2.0,  which is available at http://www.apache.org/licenses/LICENSE-2.0. In short, this license allows you to use, compose and distribute the GDSGE compiler or generated codes freely. However, it is requested that the companion paper be cited:
 
-​**Cao, Dan and Luo, Wenlan and Nie, Guangyu, Global DSGE Models (April 1, 2020). Available at SSRN: https://ssrn.com/abstract=3569013 or http://dx.doi.org/10.2139/ssrn.3569013**
+**Cao, Dan and Luo, Wenlan and Nie, Guangyu, Global DSGE Models (April 1, 2020). Available at SSRN: https://ssrn.com/abstract=3569013 or http://dx.doi.org/10.2139/ssrn.3569013**
 
 GDSGE relies on the following external libraries, with their licenses described below and attached under folder licenses/:
 
@@ -62,7 +67,7 @@ GDSGE relies on the following external libraries, with their licenses described 
 
 * myppual: Construct and Evaluate splines in ppform at flexible vector-valued dimensions, table look-up index, and spline dimension reduction in both vectorized pure MATLAB code and CMEX implementation.
 
-  Copyright Jinhui Bai (jinhui.bai@gmail.com) and Wenlan Luo (luowenlan@gmail.com)
+  Copyright (c) 2014 Jinhui Bai (jinhui.bai@gmail.com) and Wenlan Luo (luowenlan@gmail.com)
 
 * v2struct: Pack/Unpack Variables to/from a scalar structure.
 
