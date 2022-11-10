@@ -66,7 +66,22 @@ breaks = pp.breaks;
 
 arrayOffset = double(prod(newCoefsSize(1:(1+2*xDim))));
 
+
+%{
 InterpEval = v2struct(coefs,fullVecEvalCoefsLength,singleVecEvalCoefsLength, ...
     xDim,order,pieces,xPts,breaks,dim,arrayOffset);
+%}
+% Explict assignment to aovid copy
+InterpEval = struct;
+InterpEval.coefs = coefs;
+InterpEval.fullVecEvalCoefsLength = fullVecEvalCoefsLength;
+InterpEval.singleVecEvalCoefsLength = singleVecEvalCoefsLength;
+InterpEval.xDim = xDim;
+InterpEval.order = order;
+InterpEval.pieces = pieces;
+InterpEval.xPts = xPts;
+InterpEval.breaks = breaks;
+InterpEval.dim = dim;
+InterpEval.arrayOffset = arrayOffset;
 
 end
