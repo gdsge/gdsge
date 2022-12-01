@@ -66,13 +66,13 @@ model;
   R2n' = x2*Re_n' + (1-x2)*Rf;
 
   % Agent 1's FOC wrt equity share:
-  eq1 = GNDSGE_EXPECT{Re_n'*u1n'^(1-gamma1)*R1n'^(-gamma1)} / GNDSGE_EXPECT{Rf*u1n'^(1-gamma1)*R1n'^(-gamma1)} - 1;
+  eq1 = GDSGE_EXPECT{Re_n'*u1n'^(1-gamma1)*R1n'^(-gamma1)} / GDSGE_EXPECT{Rf*u1n'^(1-gamma1)*R1n'^(-gamma1)} - 1;
 
   % Agent 2's FOC wrt equity share:
   log_u2n_R2n_gamma' = log_u2n'*(1-gamma2) - log(R2n')*gamma2;
-  min_log_u2n_R2n_gamma = GNDSGE_MIN{log_u2n_R2n_gamma'};
+  min_log_u2n_R2n_gamma = GDSGE_MIN{log_u2n_R2n_gamma'};
   log_u2n_R2n_gamma_shifted' = log_u2n_R2n_gamma' - min_log_u2n_R2n_gamma;
-  eq2 = GNDSGE_EXPECT{Re_n'*exp(log_u2n_R2n_gamma_shifted')} / GNDSGE_EXPECT{Rf*exp(log_u2n_R2n_gamma_shifted')} - 1;
+  eq2 = GDSGE_EXPECT{Re_n'*exp(log_u2n_R2n_gamma_shifted')} / GDSGE_EXPECT{Rf*exp(log_u2n_R2n_gamma_shifted')} - 1;
 
   % Consistency for omega:
   omega_future_consis' = K1 - nu*(K1-mu) + (1-nu)*Rf*b1/(yn'*(1+pn)) - omega1n';
@@ -80,10 +80,10 @@ model;
   % Update the utility functions:
   ucons1 = ((rho+nu)/(1+rho))*log(c1) + ((1-nu)/(1+rho))*log(1-c1);
   ucons2 = ((rho+nu)/(1+rho))*log(c2) + ((1-nu)/(1+rho))*log(1-c2);
-  log_u1 = ucons1 + (1-nu)/(1+rho)/(1-gamma1)*log(GNDSGE_EXPECT{(R1n'*u1n')^(1-gamma1)});        
-  log_u2 = ucons2 + (1-nu)/(1+rho)/(1-gamma2)*( log(GNDSGE_EXPECT{R2n'*exp(log_u2n_R2n_gamma_shifted')}) + min_log_u2n_R2n_gamma );
+  log_u1 = ucons1 + (1-nu)/(1+rho)/(1-gamma1)*log(GDSGE_EXPECT{(R1n'*u1n')^(1-gamma1)});        
+  log_u2 = ucons2 + (1-nu)/(1+rho)/(1-gamma2)*( log(GDSGE_EXPECT{R2n'*exp(log_u2n_R2n_gamma_shifted')}) + min_log_u2n_R2n_gamma );
 
-  expectedRe = GNDSGE_EXPECT{Re_n'};
+  expectedRe = GDSGE_EXPECT{Re_n'};
        
   equations;
     eq1;

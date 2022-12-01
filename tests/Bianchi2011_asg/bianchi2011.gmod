@@ -80,7 +80,7 @@ model;
   c = (omega*cT^(-eta) + (1-omega)*cN^(-eta))^(-1/eta);
   partial_c_partial_cT = (omega*cT^(-eta) + (1-omega)*cN^(-eta))^(-1/eta-1) * omega * cT^(-eta-1);
   lambda = c^(-sigma)*partial_c_partial_cT;
-  euler_residual = 1 - beta*(1+r) * GNDSGE_EXPECT{lambdaFuture'}/lambda - mu;
+  euler_residual = 1 - beta*(1+r) * GDSGE_EXPECT{lambdaFuture'}/lambda - mu;
   
   % Price consistent
   price_consistency = pN - ((1-omega)/omega)*(cT/cN)^(eta+1);

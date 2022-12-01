@@ -112,14 +112,14 @@ model;
   % Variable with prime is future variable
   rNext' = alpha*z'*(Kp/L')^(alpha-1);
   
-  [c1Next',c2Next'] = GNDSGE_INTERP_VEC'(Kp,Xp);
+  [c1Next',c2Next'] = GDSGE_INTERP_VEC'(Kp,Xp);
   % The above is equivalent to 
   % c1Next' = c1Future'(Kp,Xp);
   % c2Next' = c2Future'(Kp,Xp);
   
   % Note how to use the NDSGE_EXPECT operator
-  rhs1 = rhs1 + GNDSGE_EXPECT{ beta*(1-delta+rNext')*c1Next'^(-sigma)/upC1 | shock_trans2 } ;
-  rhs2 = rhs2 + GNDSGE_EXPECT{ beta*(1-delta+rNext')*c2Next'^(-sigma)/upC2 } ;
+  rhs1 = rhs1 + GDSGE_EXPECT{ beta*(1-delta+rNext')*c1Next'^(-sigma)/upC1 | shock_trans2 } ;
+  rhs2 = rhs2 + GDSGE_EXPECT{ beta*(1-delta+rNext')*c2Next'^(-sigma)/upC2 } ;
   
   equations;
     % Budget

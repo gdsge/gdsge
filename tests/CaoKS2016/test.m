@@ -6,13 +6,13 @@ IterOptions.SaveFreq = 100;
 IterRslt = iter_CaoKS2016(IterOptions);
 SimuRslt = simulate_CaoKS2016(IterRslt);
 
-GNDSGE_ASG_INTERP = asg.construct_from_struct(IterRslt.asg_interp_struct);
+GDSGE_ASG_INTERP = asg.construct_from_struct(IterRslt.asg_interp_struct);
 
-[grids,surplus] = GNDSGE_ASG_INTERP.get_grids_info;
+[grids,surplus] = GDSGE_ASG_INTERP.get_grids_info;
 
 for j=1:4
     grid = grids{j};
-    fval{j} = GNDSGE_ASG_INTERP.eval_vec(j*ones(1,size(grid,2)),grid);
+    fval{j} = GDSGE_ASG_INTERP.eval_vec(j*ones(1,size(grid,2)),grid);
 end
 
 figure;hold on;

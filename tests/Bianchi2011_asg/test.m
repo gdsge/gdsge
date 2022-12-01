@@ -20,15 +20,15 @@ save('IterRslt.mat','IterRslt');
 
 SimuRslt = simulate_bianchi2011(IterRslt);
 
-GNDSGE_ASG_INTERP = asg.construct_from_struct(IterRslt.asg_output_struct);
-grids = GNDSGE_ASG_INTERP.get_grids_info;
+GDSGE_ASG_INTERP = asg.construct_from_struct(IterRslt.asg_output_struct);
+grids = GDSGE_ASG_INTERP.get_grids_info;
 bNext_idx = 1; % index in var_output
 pN_idx = 2;
 for j=1:16
     grid = grids{j};
     lenGrid = length(grid);
-    bNext_fval{j} = GNDSGE_ASG_INTERP.eval(j*ones(1,lenGrid),bNext_idx*ones(1,lenGrid),grid);
-    pN_fval{j} = GNDSGE_ASG_INTERP.eval(j*ones(1,lenGrid),pN_idx*ones(1,lenGrid),grid);
+    bNext_fval{j} = GDSGE_ASG_INTERP.eval(j*ones(1,lenGrid),bNext_idx*ones(1,lenGrid),grid);
+    pN_fval{j} = GDSGE_ASG_INTERP.eval(j*ones(1,lenGrid),pN_idx*ones(1,lenGrid),grid);
 end
 
 figure; 

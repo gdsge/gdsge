@@ -125,13 +125,13 @@ model;
   bNext = (nbNext + phi*R*(w*L+p*v) - kappa*q*kNext)/qb;
   
   % Interpolation
-  [flow_future',q_plus_d_future'] = GNDSGE_INTERP_VEC'(cTildeNext',kNext);
+  [flow_future',q_plus_d_future'] = GDSGE_INTERP_VEC'(cTildeNext',kNext);
   flow_future' = flow_future'*flow_scale;
 
   % some named equations
   lambda_future' = cTildeNext'^(-sigma)/(1+tau);
-  euler_bond_residual = -1 + mu + beta*GNDSGE_EXPECT{lambda_future'}/(qb*lambda);
-  euler_capital_residual = -1 + kappa*mu + beta*GNDSGE_EXPECT{lambda_future'*q_plus_d_future'}/(q*lambda);
+  euler_bond_residual = -1 + mu + beta*GDSGE_EXPECT{lambda_future'}/(qb*lambda);
+  euler_capital_residual = -1 + kappa*mu + beta*GDSGE_EXPECT{lambda_future'*q_plus_d_future'}/(q*lambda);
   % consistency equation
   cTilde_consis' = flow_future' + bNext - cTildeNext'*(1+tau);
   

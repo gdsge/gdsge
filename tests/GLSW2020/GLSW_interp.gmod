@@ -133,8 +133,8 @@ model;
 
    budget1_resid = P1*c1_1 + c1_2 + a1n/(1+r) - W1*n1 - a1;
 
-   euler_residual = 1 - beta*(1+r) * GNDSGE_EXPECT{lambda1Future'}/lambda1 - mu1;
-   euler_residua2 = 1 - beta*(1+r) * GNDSGE_EXPECT{lambda2Future'}/lambda2 - mu2;
+   euler_residual = 1 - beta*(1+r) * GDSGE_EXPECT{lambda1Future'}/lambda1 - mu1;
+   euler_residua2 = 1 - beta*(1+r) * GDSGE_EXPECT{lambda2Future'}/lambda2 - mu2;
  
    a2n = -a1n*phi/(1-phi);
    slackness1 = mu1*(a1n + Abar);

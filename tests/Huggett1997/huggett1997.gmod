@@ -54,7 +54,7 @@ pre_iter;
   switch TASK
     case 'ss'
     case 'transition'
-      t = T - GNDSGE_Iter + 1;  % Convert forward to backward
+      t = T - GDSGE_Iter + 1;  % Convert forward to backward
       r = r_t(t);
       w = w_t(t);
   end
