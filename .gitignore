@@ -1,6 +1,7 @@
 source/include/Eigen
 source/@sym/*.m
 source/@sym/private/*.m
+.DS_Store
 
 # For tests
 # Bianchi2011
