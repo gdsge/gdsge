@@ -38,13 +38,21 @@ Then, acquire the source code by cloning the git repository:
 git clone https://github.com/gdsge/gdsge
 ```
 
-Finally, in MATLAB, change directory to gdsge/tests, run
+Next, in MATLAB, change directory to gdsge/tests, run
 
 ```matlab
 runtests
 ```
 
 which runs all the tests and produce all results in the companion paper [Cao, Luo, and Nie (2020)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3569013).
+
+To compile a gmod file, add folder "source" to MATLAB search path and run *gdsge_codegen* after changing the working directory to the one that contains the gmod file. For example, suppose you have located tests/HeatonLucas1996 with HL1996.gmod in the working directory, then simply run 
+
+```matlab
+gdsge_codegen('HL1996')
+```
+
+which will generate all the source codes and call the C++ compiler to compile the mex files.
 
 ## License
 
