@@ -8,21 +8,16 @@ The toolbox can be used to solve models in macroeconomics, international finance
 
 See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 
-## Requirements for running codes compiled remotely
-
-* Windows / macOS
-
-* MATLAB ver>=2017b. MATLAB toolbox: Curve Fitting
-
-* Upload your gmod file following the instruction here: [GDSGE: A Toolbox for Solving DSGE Models with Global Methods — GDSGE Homepage](http://www.gdsge.com/)
-
 ## Requirements for the local compiler
 
 * Windows / macOS
 
 * MATLAB ver>=2017b. MATLAB toolboxes: Symbolic Math, Curve Fitting
 
-* Visual C++ 2019 / Intel C++ Compiler 2017 or other MATLAB-compatible C++ compilers
+* One of the following C++ compilers:
+  * Windows: Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
+  * macOS: Intel C++ Compiler 2017 or newer
+
 
 ## Installation of the local compiler
 
@@ -32,7 +27,9 @@ First, Configure your mex C++ compiler by running in MATLAB
   mex -setup c++
   ```
 
-Then, acquire the source code by cloning the git repository:
+(For macOS users, see [the instruction for how to setup the Intel C++ compiler](README_compiler_macOS.md).)
+
+Then, acquire the source code by cloning the git repository (*the folder name should not contain spaces*):
 
 ```git
 git clone https://github.com/gdsge/gdsge
