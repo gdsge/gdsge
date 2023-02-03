@@ -41,7 +41,7 @@ Next, in MATLAB, change directory to gdsge/tests, run
 runtests
 ```
 
-which runs all the tests and produce all results in the companion paper [Cao, Luo, and Nie (2020)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3569013).
+which runs all the tests and produce all results in the companion paper [Cao, Luo, and Nie (2023)](https://www.sciencedirect.com/science/article/pii/S1094202523000017).
 
 To compile a gmod file, add folder "source" to MATLAB search path and run *gdsge_codegen* after changing the working directory to the one that contains the gmod file. For example, suppose you have located tests/HeatonLucas1996 with HL1996.gmod in the working directory, then simply run 
 
