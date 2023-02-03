@@ -29,7 +29,7 @@ First, Configure your mex C++ compiler by running in MATLAB
 
 (For macOS users, see [the instruction for how to setup the Intel C++ compiler](README_compiler_macOS.md).)
 
-Then, acquire the source code by cloning the git repository (*the folder name should not contain spaces*):
+Then, acquire the source code by cloning the git repository (*the local folder name should not contain spaces*):
 
 ```git
 git clone https://github.com/gdsge/gdsge
@@ -55,7 +55,7 @@ which will generate all the source codes and call the C++ compiler to compile th
 
 GDSGE is released under the Apache License, Version 2.0,  which is available at http://www.apache.org/licenses/LICENSE-2.0. In short, this license allows you to use, compose and distribute the GDSGE compiler or generated codes freely. However, it is requested that the companion paper be cited:
 
-**Cao, Dan and Luo, Wenlan and Nie, Guangyu, Global DSGE Models (April 1, 2020). Available at SSRN: https://ssrn.com/abstract=3569013 or http://dx.doi.org/10.2139/ssrn.3569013**
+**Dan Cao, Wenlan Luo, Guangyu Nie, Global DSGE models, Review of Economic Dynamics, 2023. Available at: https://www.sciencedirect.com/science/article/pii/S1094202523000017**
 
 GDSGE relies on the following external libraries, with their licenses described below and attached under folder licenses/:
 
