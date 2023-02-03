@@ -19,9 +19,10 @@
 #define MAX_STACK_DIM 10000
 
 #include "mex.h"
+#include "adept_extension.h"
 #include "mm_lite.h"
-#include "interp_lite.h"
 #include "codosol.h"
+#include "interp_lite.h"
 #include "MatlabPp.h"
 #include "MatlabInterpEval.h"
 #include "cmath"
@@ -33,7 +34,6 @@ using std::vector;
 #include "omp.h"
 #endif
 
-#include "adept_extension.h"
 #include "wl_math.h"
 #ifdef USE_ASG
   #include "class_handle.hpp"
