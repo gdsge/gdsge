@@ -55,7 +55,7 @@ which will generate all the source codes and call the C++ compiler to compile th
 
 GDSGE is released under the Apache License, Version 2.0,  which is available at http://www.apache.org/licenses/LICENSE-2.0. In short, this license allows you to use, compose and distribute the GDSGE compiler or generated codes freely. However, it is requested that the companion paper be cited:
 
-**Dan Cao, Wenlan Luo, Guangyu Nie, Global DSGE models, Review of Economic Dynamics, 2023. Available at: https://www.sciencedirect.com/science/article/pii/S1094202523000017**
+**Dan Cao, Wenlan Luo, and Guangyu Nie (2023). Global DSGE models. Review of Economic Dynamics, forthcoming. Available at: https://www.sciencedirect.com/science/article/pii/S1094202523000017**
 
 GDSGE relies on the following external libraries, with their licenses described below and attached under folder licenses/:
 
