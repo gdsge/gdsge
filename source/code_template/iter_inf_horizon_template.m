@@ -97,7 +97,7 @@ while(~stopFlag)
     GDSGE_Metric0 = GDSGE_Metric;
     
     if IS_WARMUP_LOOP==1
-        GDSGE_Metric = inf;
+%         GDSGE_Metric = inf;
         IS_WARMUP_LOOP = 0;
     end
     

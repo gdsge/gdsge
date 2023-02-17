@@ -42,6 +42,8 @@ SimuRslt.shock(:,GEN_SHOCK_START_PERIOD:end) = gen_discrete_markov_rn(shock_tran
 shock_num = size(shock_trans,1);
 GDSGE_SHOCK_VAR_INDEX_BASE = ([0:num_samples-1]')*shock_num;
 for GDSGE_t=1:num_periods
+    SIMU_PRE_ITER_CODE
+
     % constrain states inbound
     if EnforceSimuStateInbound==1
         SIMU_STATE_INBOUND_CODE

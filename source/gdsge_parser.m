@@ -500,7 +500,7 @@ num_aux_init_total = sum(max(var_aux_init_length,1));
 
 parameters_vec_name = strcat(parameters_name,{'(:)'});
 
-var_pre_tensor_name = [var_tensor_name var_state_name var_shock_name];
+var_pre_tensor_name = [var_state_name var_shock_name];
 
 var_all_name = [parameters_name var_state_name var_shock_name var_tensor_name var_policy_name var_interp_name var_aux_name];
 assert_valid_var_name(var_all_name);
@@ -838,10 +838,10 @@ for j=1:length(lines)
                 var_name = words{2};
                 var_name_idx = find(ismember(var_policy_init_name,var_name));
                 % Substitute tensor
-                for k=1:length(var_pre_tensor_name)
-                    words{3} = replace_tensor_name(words{3},var_pre_tensor_name,tensorPrefix);
-                    words{4} = replace_tensor_name(words{4},var_pre_tensor_name,tensorPrefix);
-                end
+                words{3} = replace_tensor_name(words{3},var_pre_tensor_name,tensorPrefix);
+                words{3} = replace_tensor_name(words{3},var_tensor_name,'');
+                words{4} = replace_tensor_name(words{4},var_pre_tensor_name,tensorPrefix);
+                words{4} = replace_tensor_name(words{4},var_tensor_name,'');
                 % Account for policy length
                 for loc=1:max(1,var_policy_init_length(var_name_idx))
                     inboundInitCode = [inboundInitCode ...
@@ -858,10 +858,10 @@ for j=1:length(lines)
                 var_name = words{2};
                 var_name_idx = find(ismember(var_policy_name,var_name));
                 % Substitute tensor
-                for k=1:length(var_pre_tensor_name)
-                    words{3} = replace_tensor_name(words{3},var_pre_tensor_name,tensorPrefix);
-                    words{4} = replace_tensor_name(words{4},var_pre_tensor_name,tensorPrefix);
-                end
+                words{3} = replace_tensor_name(words{3},var_pre_tensor_name,tensorPrefix);
+                words{3} = replace_tensor_name(words{3},var_tensor_name,'');
+                words{4} = replace_tensor_name(words{4},var_pre_tensor_name,tensorPrefix);
+                words{4} = replace_tensor_name(words{4},var_tensor_name,'');
                 % Account for policy length
                 inboundCode = [inboundCode ...
                         'GDSGE_LB_MODEL_ID(' num2str(var_policy_loc(var_name_idx)) ':' num2str(var_policy_loc(var_name_idx)+max(var_policy_length(var_name_idx),1)-1) ',:)=' words{3} ';' LINE_BREAK...
@@ -936,6 +936,7 @@ for j=1:length(lines)
                 if var_name_idx
                     % Substitute tensor
                     words{3} = replace_tensor_name(words{3},var_pre_tensor_name,tensorPrefix);
+                    words{3} = replace_tensor_name(words{3},var_tensor_name,'');
                     for loc=1:max(1,var_policy_length(var_name_idx))
                         policyInitializeCode = [policyInitializeCode ...
                             'GDSGE_X0_MODEL_ID(' num2str(var_policy_loc(var_name_idx)+loc-1) ',:)=' words{3:end} ';' LINE_BREAK...
@@ -946,6 +947,7 @@ for j=1:length(lines)
                     if var_name_idx
                         % Substitute tensor
                         words{3} = replace_tensor_name(words{3},var_pre_tensor_name,tensorPrefix);
+                        words{3} = replace_tensor_name(words{3},var_tensor_name,'');
                         interpInitializeCode = [interpInitializeCode ...
                             words{2} '(:)=' words{3:end} ';' LINE_BREAK...
                             ];
@@ -1148,7 +1150,7 @@ if USE_ASG
     % Do an inplace substitution
     interpGetThreadCode = regexprep(interpGetThreadCode,'ASG_MAX_DIM',num2str(num_state));
     interpGetThreadCode = regexprep(interpGetThreadCode,'ASG_MAX_NVEC',num2str(num_interp));
-elseif USE_SPLINE
+elseif USE_SPLINE || USE_PCHIP
     interpGetCode = fileread([template_folder '/interp_spline_construct_template.cpp']);
     interpGetThreadCode = fileread([template_folder '/interp_spline_prepare_space_template.cpp']);
     % Do an inplace substitution
@@ -1712,6 +1714,7 @@ if ~isempty(simulateCode)
         simulateCode = regexprep(simulateCode,'SIMULATE_INTERP_CONSTRUCT_CODE',simulateInterpConstructionCode);
         simulateCode = regexprep(simulateCode,'SIMULATE_INTERP_EVAL_CODE',simulateInterpEvalCode);
         simulateCode = regexprep(simulateCode,'SIMU_POST_ASSIGN_CODE',simuPostAssignCode);
+        simulateCode = regexprep(simulateCode,'SIMU_PRE_ITER_CODE',simuPreIterCode);
         simulateCode = regexprep(simulateCode,'SIMU_POST_ITER_CODE',simuPostIterCode);
         simulateCode = regexprep(simulateCode,'SIMU_RSLT_STATE_SEMI_COLON',my_strjoin(simuRslt_state_name,';'));
         simulateCode = regexprep(simulateCode,'ASSIGN_INTERP_TO_OUTPUT_CODE',assignInterpToOutputCode);
