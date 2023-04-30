@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Editor plugins
+- Return more model information (now parameter values in .gmod files are returned)
 
 ### Changed
 
@@ -17,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add instructions for setting up compilers on a macOS
 - Fix include dependence bugs
 - Fix bugs in using var_tensor
+- Fix bugs in initiating var_interp with _INTERP affix
 
 ## [0.1.1] - 2022-09-30
 

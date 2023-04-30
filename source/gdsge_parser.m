@@ -385,34 +385,6 @@ for j=1:length(lines)
                         var_interp_name{end+1} = words{k};
                         var_interp_arg_name{end} = {};
                     end
-                    current_var_interp_name = var_interp_name{end};
-                    if length(current_var_interp_name)>7 && strcmp(current_var_interp_name(end-6:end),'_INTERP')==1
-                        current_var_interp_name_short = current_var_interp_name(1:end-7);
-                        % Plug in var_aux if not yet specified
-                        var_aux_length(end+1) = 0;
-                        var_aux_name{end+1} = current_var_interp_name_short;
-                        var_aux_loc(end+1) = aux_loc;
-                        aux_loc = aux_loc+1;
-                        
-                        var_aux_init_length(end+1) = 0;
-                        var_aux_init_name{end+1} = current_var_interp_name_short;
-                        var_aux_init_loc(end+1) = aux_init_loc;
-                        aux_init_loc = aux_init_loc+1;
-                    end
-                    
-                    if length(current_var_interp_name)>9 && strcmp(current_var_interp_name(end-8:end),'_INTERP_E')==1
-                        current_var_interp_name_short = current_var_interp_name(1:end-9);
-                        % Plug in var_aux if not yet specified
-                        var_aux_length(end+1) = 0;
-                        var_aux_name{end+1} = current_var_interp_name_short;
-                        var_aux_loc(end+1) = aux_loc;
-                        aux_loc = aux_loc+1;
-                        
-                        var_aux_init_length(end+1) = 0;
-                        var_aux_init_name{end+1} = current_var_interp_name_short;
-                        var_aux_init_loc(end+1) = aux_init_loc;
-                        aux_init_loc = aux_init_loc+1;
-                    end
                 end
             case 'var_aux'
                 for k=2:length(words)
@@ -461,6 +433,46 @@ for j=1:length(lines)
             case ''
             otherwise
                 code2 = [code2 seg ';' LINE_BREAK];
+        end
+    end
+end
+
+% process automatic INTERP
+for i=1:length(var_interp_name)
+    current_var_interp_name = var_interp_name{i};
+    if length(current_var_interp_name)>7 && strcmp(current_var_interp_name(end-6:end),'_INTERP')==1
+        current_var_interp_name_short = current_var_interp_name(1:end-7);
+        % Plug in var_aux if not yet specified
+        if ~any(ismember(current_var_interp_name_short, var_aux_name)) && ~any(ismember(current_var_interp_name_short, var_policy_name))
+            var_aux_length(end+1) = 0;
+            var_aux_name{end+1} = current_var_interp_name_short;
+            var_aux_loc(end+1) = aux_loc;
+            aux_loc = aux_loc+1;
+        end
+
+        if ~any(ismember(current_var_interp_name_short, var_aux_init_name)) && ~any(ismember(current_var_interp_name_short, var_policy_init_name))
+            var_aux_init_length(end+1) = 0;
+            var_aux_init_name{end+1} = current_var_interp_name_short;
+            var_aux_init_loc(end+1) = aux_init_loc;
+            aux_init_loc = aux_init_loc+1;
+        end
+    end
+
+    if length(current_var_interp_name)>9 && strcmp(current_var_interp_name(end-8:end),'_INTERP_E')==1
+        current_var_interp_name_short = current_var_interp_name(1:end-9);
+        % Plug in var_aux if not yet specified
+        if ~any(ismember(current_var_interp_name_short, var_aux_name)) && ~any(ismember(current_var_interp_name_short, var_policy_name))
+            var_aux_length(end+1) = 0;
+            var_aux_name{end+1} = current_var_interp_name_short;
+            var_aux_loc(end+1) = aux_loc;
+            aux_loc = aux_loc+1;
+        end
+
+        if ~any(ismember(current_var_interp_name_short, var_aux_init_name)) && ~any(ismember(current_var_interp_name_short, var_policy_init_name))
+            var_aux_init_length(end+1) = 0;
+            var_aux_init_name{end+1} = current_var_interp_name_short;
+            var_aux_init_loc(end+1) = aux_init_loc;
+            aux_init_loc = aux_init_loc+1;
         end
     end
 end
@@ -759,9 +771,11 @@ for j=1:num_interp
             var_interp_name{j} '=' var_interp_name{j}(1:end-7) ';' LINE_BREAK];
         interpNewAssignCode = [interpNewAssignCode ...
             'GDSGE_NEW_' var_interp_name{j} '=' var_interp_name{j}(1:end-7) ';' LINE_BREAK];
+        continue;
     else
         interpInitializeCode = [interpInitializeCode ...
             var_interp_name{j} '=zeros(GDSGE_SIZE);' LINE_BREAK];
+        continue;
     end
     
     if length(var_interp_name{j})>9 && strcmp(var_interp_name{j}(end-8:end),'_INTERP_E')==1
@@ -770,9 +784,11 @@ for j=1:num_interp
             var_interp_name{j} '=shock_trans*reshape(' var_interp_name{j}(1:end-9) ',shock_num,[]);' LINE_BREAK];
         interpNewAssignCode = [interpNewAssignCode ...
             'GDSGE_NEW_' var_interp_name{j} '=shock_trans*reshape(' var_interp_name{j}(1:end-9) ',shock_num,[]);' LINE_BREAK];
+        continue;
     else
         interpInitializeCode = [interpInitializeCode ...
             var_interp_name{j} '=zeros(GDSGE_SIZE);' LINE_BREAK];
+        continue;
     end
 end
 asgInitializeCode = '';
@@ -973,7 +989,7 @@ for j=1:length(lines)
 end
 
 %% Evaluate pre Code
-[parameters_size, pre_params] = get_parameters(code3,parameters_name);
+[parameters_size, pre_params,params] = get_parameters(code3,parameters_name);
 v2struct(pre_params);
 shock_num = pre_params.shock_num;
 
@@ -1848,7 +1864,7 @@ compileCode = strrep(compileCode,'INCLUDE_FOLDER',include_folder);
 compileCode = strrep(compileCode,'GDSGE_MAXDIM',num2str(max(num_policy_total,num_policy_init_total)+4));
 compileCode = strrep(compileCode,'GDSGE_INTERP_ORDER',num2str(INTERP_ORDER));
 
-model = v2struct(parameters_name,var_state_name,var_shock_name,var_tensor_name,var_interp_name,shock_num);
+model = v2struct(parameters_name,var_state_name,var_shock_name,var_tensor_name,var_interp_name,var_aux_name,shock_num,shock_trans,params);
 codeSegment = v2struct(setParamsCode,iterInitCode,prepareSpaceCode,constructSplineCode,solveAndAssignCode);
 end
 
@@ -2773,7 +2789,7 @@ end
 
 function check_reserve_word(words)
 reserveWordsList = {'parameters','var_state','shock_num','var_shock','var_tensor','var_policy','inbound','initial','var_interp','model','end','equations','f','grad','x','i','data','otherData','j','MAX',...
-    'shock_trans','shock_num','shock','diff','cxx'};
+    'shock_trans','shock_num','shock','diff','cxx','E','pi','I'};
 for j=1:length(words)
     if find(ismember(reserveWordsList,words{j}))
         error('GDSGE:nameConflict','reserved name not allowed: %s',words{j});
@@ -2789,7 +2805,7 @@ else
 end
 end
 
-function [parameters_size,pre_params] = get_parameters(preCode,parameters_name)
+function [parameters_size,pre_params,params] = get_parameters(preCode,parameters_name)
 % Print preCode to a file
 if ~isempty(preCode)
     fileID = fopen(['gdsge_precode.m'],'w');
@@ -2835,7 +2851,9 @@ for j=1:length(parameters_name)
     %}
 end
 
-pre_params = v2struct(INTERP_ORDER,USE_FINITE_DIFF,EXTRAP_ORDER,USE_SPLINE,USE_ASG,USE_SPARSE_JACOBIAN,USE_PCHIP,AsgMaxLevel,SIMU_INTERP,SIMU_RESOLVE,UseModelId,shock_num,REMOVE_NULL_STATEMENTS);
+pre_params = v2struct(INTERP_ORDER,USE_FINITE_DIFF,EXTRAP_ORDER,USE_SPLINE,USE_ASG,USE_SPARSE_JACOBIAN,USE_PCHIP,AsgMaxLevel,SIMU_INTERP,SIMU_RESOLVE,UseModelId,shock_num,shock_trans,REMOVE_NULL_STATEMENTS);
+evalString = ['params = v2struct(', my_strjoin(parameters_name,','), ');'];
+eval(evalString);
 end
 
 function code = process_deprecate_single(code,oldWord,newWord)
