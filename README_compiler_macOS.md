@@ -8,7 +8,7 @@
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   ```
 
-- Install g++ version. Mex files compiled with newer version of g++ crash MATLAB for known compatibility issues.
+- Install g++ version 8. Mex files compiled with newer version of g++ crash MATLAB for known compatibility issues.
   ```bash
   brew install gcc@8
   ```
