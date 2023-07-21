@@ -86,3 +86,6 @@ GDSGE relies on the following external libraries, with their licenses described 
 * Intel Math Kernel Library.
 
   Licensed under the Intel Simplified Software License (Version February 2020)
+
+* Eigen: a C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.
+  Starting from the 3.1.1 version, it is licensed under the [MPL2](https://www.mozilla.org/en-US/MPL/2.0/)
