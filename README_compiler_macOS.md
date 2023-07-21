@@ -1,4 +1,4 @@
-# Instruction for setting up he g++ as the Mex compiler on macOS
+# Instruction for setting up g++ as the Mex compiler on macOS
 
 - Why g++ but not Xcode/Intel Compiler? (1) Xcode does not officially support openmp. (2) Support from Intel is conditional on the open software license which may not be renewed. (3) Supporting g++ automatically supports MinGW under Windows.
 
