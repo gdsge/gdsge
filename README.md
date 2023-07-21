@@ -15,7 +15,7 @@ See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 * MATLAB ver>=2017b. MATLAB toolboxes: Symbolic Math, Curve Fitting
 
 * One of the following C++ compilers:
-  * Windows: MingW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
+  * Windows: MinGW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
   * macOS: g++8.5 (installed via homebrew; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md))
 
 ## Installation of the local compiler
