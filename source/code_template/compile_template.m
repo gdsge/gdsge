@@ -41,6 +41,7 @@ if ispc
         case 'MinGW64'
             flag2 = [' CFLAGS="$CFLAGS -w -fopenmp -fpermissive -DADEPT_THREAD_LOCAL=__thread"'];
             flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w -fopenmp"')];
+            copyfile("mingw/asg_mex.mexw64", current_folder);
         case 'MSVC'
             flag2 = [' -DUSE_MKL OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /Z7"'];
             flag3 = [' LINKOPTIMFLAGS="/DEBUG:FULL"'];
