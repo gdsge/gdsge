@@ -1,21 +1,21 @@
-# Instruction for setting up the Intel C++ compiler on a macOS
+# Instruction for setting up he g++ as the Mex compiler on macOS
 
-- Install Xcode from the Mac App Store
+- Why g++ but not Xcode/Intel Compiler? (1) Xcode does not officially support openmp. (2) Support from Intel is conditional on the open software license which may not be renewed. (3) Supporting g++ automatically supports MinGW under Windows.
 
-- Acquire the Intel C++ Compiler for macOS from the official website: [Intel® oneAPI standalone component installation files](https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html#dpcpp-cpp)
-
-- Set the compiler environment by typing in the macOS terminal
+- Install [homebrew](https://brew.sh/) in a macOS terminal
 
   ```bash
-  source /opt/intel/oneapi/setvars.sh
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   ```
 
-  or exporting the path that contains the compiler executable
-
+- Install g++ version. Mex files compiled with newer version of g++ crash MATLAB for known compatibility issues.
   ```bash
-  export PATH=/opt/intel/oneapi/compiler/2023.0.0/mac/bin/intel64/:$PATH
+  brew install gcc@8
   ```
 
-  Note that you need to modify the path-to-intel-compiler accordingly
+- Launch MATLAB, change directory to "gdsge/plugins". Run
+  ```matlab
+  mex -setup -f g++_maci64.xml
+  ```
 
-- *In the same macOS terminal*, run MATLAB to make sure it can find the intel compiler
+  to  setup g++ as the mex compiler.

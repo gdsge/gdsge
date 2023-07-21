@@ -11,33 +11,6 @@ if nargin>=1
 end
 
 try
-MISC = 'sig_die.o cabs.o ctype.o exit_.o ';
-POW = 'pow_di.o pow_dd.o ';
-CX = '';
-DCX = 'z_div.o ';
-REAL = 'r_mod.o ';
-DBL = 'd_sign.o ';
-INT = 'i_len.o i_indx.o ';
-HALF = '';
-CMP = 'l_ge.o l_le.o l_lt.o ';
-EFL = '';
-CHAR = 'f77_aloc.o s_cat.o s_cmp.o s_copy.o ';
-I77 =	['backspac.o close.o dfe.o dolio.o due.o endfile.o err.o '...
-    'fmt.o fmtlib.o ftell_.o iio.o ilnw.o inquire.o lread.o lwrite.o '...
-    'open.o rdfmt.o rewind.o rsfe.o rsli.o rsne.o sfe.o sue.o '...
-    'typesize.o uio.o util.o wref.o wrtfmt.o wsfe.o wsle.o wsne.o xwsne.o '];
-QINT = '';
-TIME = 'etime_.o';
-OFILES = [MISC POW CX DCX REAL DBL INT HALF CMP EFL CHAR I77 TIME];
-OFILES = strsplit(OFILES, ' ');
-LIBF2C_SRC = strrep(OFILES, '.o', '.c');
-LIBF2C_SRC = strcat([' dep/snopt/libf2c/'], LIBF2C_SRC);
-LIBF2C_SRC = strjoin(LIBF2C_SRC);
-
-SNOPT_SRC = dir('dep/snopt/snopt/*.c');
-SNOPT_SRC = strcat([' dep/snopt/snopt/'], {SNOPT_SRC.name});
-SNOPT_SRC = strjoin(SNOPT_SRC);
-
 flag0 = '';
 flag1 = '';
 flag2 = '';
@@ -49,34 +22,54 @@ cppFileName = [' ' current_folder '/mex_MODEL_NAME.cpp'];
 ME = [];
 
 if ispc
-    mexCommand = 'mex';
-    flag0 = [flag0 ' -DNO_TRUNCATE'];
-    % err.c
-    flag0 = [flag0 ' -DNO_ISATTY'];
-    % open.c
-    flag0 = [flag0 ' -DMSDOS'];
-    
-    compilerWin = mex.getCompilerConfigurations('C++');
-    isIntel = strcmp(compilerWin.Manufacturer,'Intel');
-    if isIntel>0
-        %{
-        flag2 = [' OPTIMFLAGS="/O2 /DNDEBUG /QxCORE-AVX2" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /Qansi-alias /openmp /QxCORE-AVX2"'];
-        %}
-        flag2 = [' OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /Qansi-alias /openmp"'];
+    compiler_name = mex.getCompilerConfigurations('C++').Name;
+    if contains(compiler_name, 'MinGW64')
+        compiler_name = 'MinGW64';
+    elseif contains(compiler_name, 'Microsoft Visual C++')
+        compiler_name = 'MSVC';
     else
-        flag2 = [' OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /Z7"'];
-        flag3 = [' LINKOPTIMFLAGS="/DEBUG:FULL"'];
-        %{
-        flag2 = [' OPTIMFLAGS="/O2 /DNDEBUG /arch:AVX2" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /arch:AVX2"'];
-        %}
+        compiler_name = 'Intel';
     end
-    
+elseif isunix
+    % only support g++ under linux/macOS
+    compiler_name = 'g++';
+end
+
+if ispc
+    mexCommand = 'mex';
+    switch compiler_name
+        case 'MinGW64'
+            flag2 = [' CFLAGS="$CFLAGS -w -fopenmp -fpermissive -DADEPT_THREAD_LOCAL=__thread"'];
+            flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w -fopenmp"')];
+        case 'MSVC'
+            flag2 = [' -DUSE_MKL OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /Z7"'];
+            flag3 = [' LINKOPTIMFLAGS="/DEBUG:FULL"'];
+        otherwise
+            % default to intel
+            flag2 = [' -DUSE_MKL OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /Qansi-alias /openmp"'];
+    end
+
     if exist('DEBUG','var')~=0
-        flag2 = [' -v OPTIMFLAGS="/Og /Z7 /Zo /debug:full " COMPFLAGS="$COMPFLAGS "'];
-        flag3 = [' LINKOPTIMFLAGS="/DEBUG:FULL"'];
+        switch compiler_name
+            case 'MSVC'
+                flag2 = [' -v OPTIMFLAGS="/Og /Z7 /Zo /debug:full " COMPFLAGS="$COMPFLAGS "'];
+                flag3 = [' LINKOPTIMFLAGS="/DEBUG:FULL"'];
+            otherwise
+                flag2 = [' -v OPTIMFLAGS="/Og /Z7 /Zo /debug:full " COMPFLAGS="$COMPFLAGS "'];
+                flag3 = [' LINKOPTIMFLAGS="/DEBUG:FULL"'];
+        end
     end
     
-    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 cppFileName ' ./lib/essential_blas.lib' ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
+    switch compiler_name
+        case 'MinGW64'
+            link_to_lib = '';
+        case 'MSVC'
+            link_to_lib = sprintf(' "%s/essential_blas.lib"',gdsge_folder);
+        otherwise
+            error('compiler not supported');
+    end
+
+    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 cppFileName link_to_lib ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 
 elseif isunix && ~ismac
     mexCommand = 'mex CXX=icc CXXOPTIMFLAGS= LDOPTIMFLAGS=';
@@ -87,11 +80,10 @@ elseif isunix && ~ismac
     
     compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 cppFileName LIBF2C_SRC SNOPT_SRC ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 elseif ismac
-    mexCommand = 'mex CXX=icc CXXOPTIMFLAGS="-O1 -DNDEBUG -QxCORE-AVX2" LDOPTIMFLAGS=';
+    mexCommand = 'mex CC=/usr/local/bin/gcc-8 CXX=/usr/local/bin/g++-8';
     
-    flag2 = [' CXXFLAGS="$CXXFLAGS -O1 -DADEPT_THREAD_LOCAL=__thread -DNDEBUG -QxCORE-AVX2 -std=c++14 -qopenmp -qopenmp-link=static -ansi-alias -w"'];
-    
-    flag3 = [' LDFLAGS="$LDFLAGS essential_blas.dylib -liomp5 -lpthread -qopenmp-link=static"'];
+    flag2 = [' CFLAGS="$CFLAGS -w -fopenmp -fpermissive -fexceptions -DUSE_MKL -DADEPT_THREAD_LOCAL=__thread"'];
+    flag3 = [sprintf(' LDFLAGS="$LDFLAGS essential_blas.dylib -w -fopenmp"')];
     
     compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 cppFileName ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 end

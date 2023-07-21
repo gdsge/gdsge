@@ -30,6 +30,7 @@ namespace adept {
 
 	// Extension for jacobian evaluation with vectorization
 	// The compiler can now do a better job than manual multipass
+#ifdef __WIN32__
 	void Stack::jacobian_forward_vec(double* jacobian_out)
 	{
         const Offset numIndependent = MAXDIM;
@@ -92,4 +93,5 @@ namespace adept {
 		}
 #undef GRADIENT
 	}
+#endif
 }

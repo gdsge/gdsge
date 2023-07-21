@@ -623,7 +623,9 @@ namespace adept {
     void jacobian_forward(Real* jacobian_out);
     void jacobian_reverse(Real* jacobian_out);
 
+    #ifdef __WIN32__
     void jacobian_forward_vec(double* jacobian_out);
+    #endif
 
     // Return maximum number of OpenMP threads to be used in Jacobian
     // calculation

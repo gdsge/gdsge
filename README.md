@@ -15,9 +15,8 @@ See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 * MATLAB ver>=2017b. MATLAB toolboxes: Symbolic Math, Curve Fitting
 
 * One of the following C++ compilers:
-  * Windows: Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
-  * macOS: Intel C++ Compiler 2017 or newer
-
+  * Windows: MingW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
+  * macOS: g++8.5 (installed via homebrew; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md))
 
 ## Installation of the local compiler
 
@@ -27,7 +26,7 @@ First, Configure your mex C++ compiler by running in MATLAB
   mex -setup c++
   ```
 
-(For macOS users, see [the instruction for how to setup the Intel C++ compiler](README_compiler_macOS.md).)
+(For macOS users, see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md).)
 
 Then, acquire the source code by cloning the git repository (*the local folder name should not contain spaces*):
 

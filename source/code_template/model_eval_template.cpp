@@ -63,7 +63,11 @@
                     PRE_JAC_CODE
                     _stack.independent(&GDSGE_x_adept[0], NUM_EQUATIONS);
                     _stack.dependent(&GDSGE_EQ[0], NUM_EQUATIONS);
+                    #ifdef __WIN32__
                     _stack.jacobian_forward_vec(GDSGE_jac);
+                    #else
+                    _stack.jacobian_forward(GDSGE_jac);
+                    #endif
                     POST_JAC_CODE
                 #endif
             }

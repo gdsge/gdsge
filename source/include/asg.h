@@ -641,7 +641,7 @@ namespace AdaptiveSparseGridInterp {
 
 			// Calculate surplus using vectorization
 #ifdef USE_OMP
-#pragma omp parallel for simd
+#pragma omp parallel for
 #endif
 			for (int i = 0; i < gridsNextLevel.size()*numVec; i++)
 			{

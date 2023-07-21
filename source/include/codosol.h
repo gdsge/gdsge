@@ -16,6 +16,8 @@ CoDoSol
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <Eigen/SparseQR>
+#elif !defined(USE_MKL)
+#include <Eigen/Dense>
 #endif
 
 #ifndef MAXDIM
@@ -260,7 +262,7 @@ namespace CoDoSol
 		// iteration
 		double lambda = 0;
         
-        #if MAXDIM>100
+        #if !defined(__WIN32__) || MAXDIM>100
 	double* grad = (double*) malloc(sizeof(double)*(MAXDIM));
 	double* grad_old = (double*) malloc(sizeof(double)*(MAXDIM));
 
@@ -367,9 +369,14 @@ namespace CoDoSol
 			Eigen::Map<Eigen::MatrixXd> fx_dense(fx, n, 1);
 			Eigen::Map<Eigen::MatrixXd> grad_dense(grad, n, 1);
 			grad_dense = jac_sparse.transpose() * fx_dense;
-			#else
+			#elif defined(USE_MKL)
 			_dgemv('T',
 				n, n, 1.0, jac, n, fx, 1, 0, grad, 1);
+			#else
+			Eigen::Map<Eigen::MatrixXd> jac_dense(jac, n, n);
+			Eigen::Map<Eigen::MatrixXd> fx_dense(fx, n, 1);
+			Eigen::Map<Eigen::MatrixXd> grad_dense(grad, n, 1);
+			grad_dense = jac_dense.transpose() * fx_dense;
 			#endif
 
 			// Calculate of the scaling matrices 
@@ -383,9 +390,12 @@ namespace CoDoSol
 			#ifdef USE_SPARSE_JACOBIAN
 			Eigen::Map<Eigen::MatrixXd> jdgrad_dense(jdgrad, n, 1);
 			jdgrad_dense = jac_sparse * Eigen::Map<Eigen::MatrixXd>(dgrad, n, 1);
-			#else
+			#elif defined(USE_MKL)
 			_dgemv('N',
 				n, n, 1.0, jac, n, dgrad, 1, 0, jdgrad, 1);
+			#else
+			Eigen::Map<Eigen::MatrixXd> jdgrad_dense(jdgrad, n, 1);
+			jdgrad_dense = jac_dense * Eigen::Map<Eigen::MatrixXd>(dgrad, n, 1);
 			#endif
 			vec_divide(n, grad, G, Gmgrad);
 
@@ -407,15 +417,14 @@ namespace CoDoSol
 			Eigen::SparseQR<Eigen::SparseMatrix<double>,Eigen::COLAMDOrdering<int>> solver;
 			solver.compute(jac_sparse);
 			sn_dense = solver.solve(fx_dense);
-		 	/*
-			Eigen::ColPivHouseholderQR<Eigen::MatrixXd> solver(jac_dense);
-			sn_dense = solver.solve(fx_dense);
-			*/
-			#else
+			#elif defined(USE_MKL)
 			memcpy(jacTemp, jac, sizeof(double)*n*n);
 			memcpy(sn, fx, sizeof(double)*n);
 			_dgetrf(n, n, jacTemp, n, ipiv);
 			_dgetrs('N', n, 1, jacTemp, n, ipiv, sn, n);
+			#else
+			Eigen::Map<Eigen::MatrixXd> sn_dense(sn, n, 1);
+			sn_dense = jac_dense.colPivHouseholderQr().solve(fx_dense);
 			#endif
 
             dscal_inplace(n, sn, -1.0);
@@ -477,9 +486,12 @@ namespace CoDoSol
 				#ifdef USE_SPARSE_JACOBIAN
 				Eigen::Map<Eigen::MatrixXd> aa_dense(aa, n, 1);
 				aa_dense += jac_sparse * Eigen::Map<Eigen::MatrixXd>(pciv, n, 1);
-				#else
+				#elif defined(USE_MKL)
 				_dgemv('N',
 					n, n, 1.0, jac, n, pciv, 1, 1.0, aa, 1);
+				#else
+				Eigen::Map<Eigen::MatrixXd> aa_dense(aa, n, 1);
+				aa_dense += jac_dense * Eigen::Map<Eigen::MatrixXd>(pciv, n, 1);
 				#endif
 
 				vec_minus(n, sn, pciv, seg);
@@ -487,9 +499,12 @@ namespace CoDoSol
 				#ifdef USE_SPARSE_JACOBIAN
 				Eigen::Map<Eigen::MatrixXd> bb_dense(bb, n, 1);
 				bb_dense = jac_sparse * Eigen::Map<Eigen::MatrixXd>(seg, n, 1);
-				#else
+				#elif defined(USE_MKL)
 				_dgemv('N',
 					n, n, 1.0, jac, n, seg, 1, 0.0, bb, 1);
+				#else
+				Eigen::Map<Eigen::MatrixXd> bb_dense(bb, n, 1);
+				bb_dense = jac_dense * Eigen::Map<Eigen::MatrixXd>(seg, n, 1);
 				#endif
 
 				double nbb = norm(n, bb);
@@ -573,9 +588,12 @@ namespace CoDoSol
 				#ifdef USE_SPARSE_JACOBIAN
 				Eigen::Map<Eigen::MatrixXd> fxpjactp_dense(fxpjactp, n, 1);
 				fxpjactp_dense += jac_sparse * Eigen::Map<Eigen::MatrixXd>(p, n, 1);
-				#else
+				#elif defined(USE_MKL)
 				_dgemv('N',
 					n, n, 1.0, jac, n, p, 1, 1.0, fxpjactp, 1);
+				#else
+				Eigen::Map<Eigen::MatrixXd> fxpjactp_dense(fxpjactp, n, 1);
+				fxpjactp_dense += jac_dense * Eigen::Map<Eigen::MatrixXd>(p, n, 1);
 				#endif
 
 				rhof = (fnrm - fnrmxpp) / (fnrm - norm(n, fxpjactp));
@@ -600,8 +618,13 @@ namespace CoDoSol
                 vec_minus(n,fxpp,fx,deltaf);
                 normdeltax = norm(n,deltax);
                 
+				#ifdef USE_MKL
                 _dgemv('N',
 					n, n, 1.0, jac, n, deltax, 1, 0.0, jacdx, 1);
+				#else
+				Eigen::Map<Eigen::MatrixXd> jacdx_dense(jacdx, n, 1);
+				jacdx_dense = jac_dense * Eigen::Map<Eigen::MatrixXd>(deltax, n, 1);
+				#endif
                 double deltaxnormsqr = norm_square(n, deltax);
                 vec_minus_inplace(n,deltaf,jacdx);
                 dscal_inplace(n, deltaf, 1.0/deltaxnormsqr);
@@ -652,7 +675,7 @@ namespace CoDoSol
 		fnrm = norm(n, fx);
         *opt_info = nvf;
         
-        #if MAXDIM>100
+        #if !defined(__WIN32__) || MAXDIM>100
 		free( grad );
 		free( grad_old );
 

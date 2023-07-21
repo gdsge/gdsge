@@ -10,7 +10,9 @@ void TASK_NAME(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   GET_DBL(FiniteDiffDelta);
   GET_INT(GDSGE_USE_BROYDEN_NOW);
 
+  #ifndef NO_OMP
   omp_set_num_threads(NumThreads);
+  #endif
   
   // 
   int GDSGE_NPROB = mxGetN(prhs[3]);
