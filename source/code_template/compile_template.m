@@ -17,7 +17,7 @@ flag2 = '';
 flag3 = '';
 flag1 = [flag1 ' -DMAXDIM=GDSGE_MAXDIM -DINTERP_ORDER=GDSGE_INTERP_ORDER -DEIGEN_DONT_PARALLELIZE ' 'EXTRA_DEF'];
 
-cppFileName = [' ' current_folder '/mex_MODEL_NAME.cpp'];
+cppFileName = fullfile(current_folder,'mex_MODEL_NAME.cpp');
 
 ME = [];
 
@@ -70,23 +70,22 @@ if ispc
             error('compiler not supported');
     end
 
-    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 cppFileName link_to_lib ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
+    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 sprintf(' "%s"',cppFileName) link_to_lib ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 
 elseif isunix && ~ismac
-    mexCommand = 'mex CXX=icc CXXOPTIMFLAGS= LDOPTIMFLAGS=';
+    mexCommand = 'mex CXX=gcc';
     
-    flag2 = [' CXXFLAGS="$CXXFLAGS -std=c++11 -openmp -no-inline-max-size -no-inline-max-total-size -ansi-alias -w"'];
+    flag2 = [' CFLAGS="$CFLAGS -w -fopenmp -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread"'];
+    flag3 = [' LDFLAGS="$LDFLAGS -w -fopenmp"'];
     
-    flag3 = [' LDFLAGS="$LDFLAGS -static-intel -liomp5"'];
-    
-    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 cppFileName LIBF2C_SRC SNOPT_SRC ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
+    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 ' "' cppFileName '" -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 elseif ismac
     mexCommand = 'mex CC=/usr/local/bin/gcc-8 CXX=/usr/local/bin/g++-8';
     
     flag2 = [' CFLAGS="$CFLAGS -w -fopenmp -fpermissive -fexceptions -DUSE_MKL -DADEPT_THREAD_LOCAL=__thread"'];
     flag3 = [sprintf(' LDFLAGS="$LDFLAGS essential_blas.dylib -w -fopenmp"')];
     
-    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 cppFileName ' -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
+    compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 ' "' cppFileName '" -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 end
     eval(compileString);
 catch ME

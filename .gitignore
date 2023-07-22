@@ -1,3 +1,5 @@
+.MATLABDriveTag
+
 source/@sym/*.m
 source/@sym/private/*.m
 .DS_Store
