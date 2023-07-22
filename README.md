@@ -18,6 +18,7 @@ See the [toolbox website for examples and documentation](http://www.gdsge.com/).
   * Windows: MinGW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
   * Linux: g++; [MATLAB online](https://matlab.mathworks.com/)
   * macOS: g++8.5 (installed via homebrew; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md))
+    * macOS with Apple Silicon processors is not supported.
 
 ## Installation of the local compiler
 
