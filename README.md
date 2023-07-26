@@ -8,18 +8,6 @@ The toolbox can be used to solve models in macroeconomics, international finance
 
 See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 
-## Requirements for the local compiler
-
-* Windows / macOS
-
-* MATLAB ver>=2017b. MATLAB toolboxes: Symbolic Math, Curve Fitting
-
-* One of the following C++ compilers:
-  * Windows: MinGW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
-  * Linux: g++; [MATLAB online](https://matlab.mathworks.com/)
-  * macOS: g++8.5 (installed via homebrew; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md))
-    * macOS with Apple Silicon processors is not supported.
-
 ## Run on MATLAB Online
 
 First, log into your [MATLAB Online](https://matlab.mathworks.com/)
@@ -39,6 +27,18 @@ runtests
 ```
 
 This produces all results in the companion paper [Cao, Luo and Nie (2023)]( https://www.sciencedirect.com/science/article/pii/S1094202523000017)
+
+## Requirements for the local compiler
+
+* Windows / macOS
+
+* MATLAB ver>=2017b. MATLAB toolboxes: Symbolic Math, Curve Fitting
+
+* One of the following C++ compilers:
+  * Windows: MinGW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
+  * Linux: g++; [MATLAB online](https://matlab.mathworks.com/)
+  * macOS: g++8.5 (installed via homebrew; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md))
+    * macOS with Apple Silicon processors is not supported.
 
 ## Installation of the local compiler
 
