@@ -12,7 +12,7 @@ See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 
 First, log into your [MATLAB Online](https://matlab.mathworks.com/)
 
-Then, download the toolbox release an unzip in the MATLAB command window:
+Then, download the toolbox release and unzip in the MATLAB command window:
 
 ```matlab
 websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/tags/v0.1.3.zip')
