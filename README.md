@@ -20,6 +20,26 @@ See the [toolbox website for examples and documentation](http://www.gdsge.com/).
   * macOS: g++8.5 (installed via homebrew; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md))
     * macOS with Apple Silicon processors is not supported.
 
+## Run on MATLAB Online
+
+First, log into your [MATLAB Online](https://matlab.mathworks.com/)
+
+Then, download the toolbox release an unzip in the MATLAB command window:
+
+```matlab
+websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/tags/v0.1.3.zip')
+unzip gdsge.zip
+```
+
+Finally, change directory to the unzipped folder and run tests in the MATLAB command window:
+
+```matlab
+cd gdsge-0.1.3/tests
+runtests
+```
+
+This produces all results in the companion paper [Cao, Luo and Nie (2023)]( https://www.sciencedirect.com/science/article/pii/S1094202523000017)
+
 ## Installation of the local compiler
 
 First, Configure your mex C++ compiler by running in MATLAB
