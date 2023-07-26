@@ -19,9 +19,10 @@ websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/tags/v0.1.3.zip
 unzip gdsge.zip
 ```
 
-Finally, change directory to the unzipped folder and run tests in the MATLAB command window:
+Finally, change directory to the unzipped folder, set up the default mex compiler, and run tests in the MATLAB command window:
 
 ```matlab
+mex -setup c++
 cd gdsge-0.1.3/tests
 runtests
 ```
