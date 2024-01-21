@@ -39,7 +39,7 @@ if ispc
     mexCommand = 'mex';
     switch compiler_name
         case 'MinGW64'
-            flag2 = [' CXXOPTIMFLAGS="-O -DNDEBUG -fthread-jumps -falign-functions -falign-jumps -falign-loops -falign-labels -fcaller-saves -fcrossjumping -fcse-follow-jumps -fcse-skip-blocks -fdelete-null-pointer-checks -fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions -findirect-inlining -fipa-sra -foptimize-sibling-calls -fpeephole2 -fregmove -freorder-blocks -freorder-functions -frerun-cse-after-loop -fsched-interblock -fsched-spec -fschedule-insns -fschedule-insns2 -fstrict-aliasing -fstrict-overflow -ftree-switch-conversion -ftree-pre -ftree-vrp" CFLAGS="$CFLAGS -w -fopenmp -fpermissive -DADEPT_THREAD_LOCAL=__thread"'];
+            flag2 = [' CXXOPTIMFLAGS="-O -DNDEBUG" CFLAGS="$CFLAGS -w -fopenmp -fpermissive -DADEPT_THREAD_LOCAL=__thread"'];
             flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w -fopenmp"')];
             copyfile("mingw/asg_mex.mexw64", current_folder);
         case 'MSVC'
@@ -75,7 +75,7 @@ if ispc
 elseif isunix && ~ismac
     mexCommand = 'mex CXX=gcc';
     
-    flag2 = [' CXXOPTIMFLAGS="-O -DNDEBUG -fthread-jumps -falign-functions -falign-jumps -falign-loops -falign-labels -fcaller-saves -fcrossjumping -fcse-follow-jumps -fcse-skip-blocks -fdelete-null-pointer-checks -fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions -findirect-inlining -fipa-sra -foptimize-sibling-calls -fpeephole2 -fregmove -freorder-blocks -freorder-functions -frerun-cse-after-loop -fsched-interblock -fsched-spec -fschedule-insns -fschedule-insns2 -fstrict-aliasing -fstrict-overflow -ftree-switch-conversion -ftree-pre -ftree-vrp" CFLAGS="$CFLAGS -w -fopenmp -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread"'];
+    flag2 = [' CXXOPTIMFLAGS="-O -DNDEBUG" CFLAGS="$CFLAGS -w -fopenmp -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread"'];
     flag3 = [' LDFLAGS="$LDFLAGS -w -fopenmp"'];
     
     compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 ' "' cppFileName '" -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
