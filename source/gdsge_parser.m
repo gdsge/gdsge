@@ -2376,8 +2376,11 @@ while j<length(lines)
                         end
                         word = regexprep(word,'''','');
                         f_var_name{end+1} = word;
-                        loopCode = [word '_GDSGE_GRID[GDSGE_iter]=GDSGE_INTERP_RSLT[' num2str(i_lhs) ']'];
+                        % loopCode = [word '_GDSGE_GRID[GDSGE_iter]=GDSGE_INTERP_RSLT[' num2str(i_lhs) ']'];
+                        loopCode = [word '_GDSGE_GRID_GDSGE_iter=GDSGE_INTERP_RSLT_GDSGE_bracket'];
                         loopCode = my_ccode(my_sym(loopCode));
+                        loopCode = strrep(loopCode, '_GDSGE_iter', '[GDSGE_iter-1]');
+                        loopCode = strrep(loopCode, '_GDSGE_bracket', ['[' num2str(i_lhs-1) ']']);
                         loopCode = [loopCode, parseComment];
                         loopCodes = [loopCodes,LINE_BREAK,...
                             loopCode];
@@ -2412,8 +2415,10 @@ while j<length(lines)
                         end
                         word = regexprep(word,'''','');
                         c_var_name{end+1} = word;
-                        loopCode = [word '=GDSGE_INTERP_RSLT[' num2str(i_lhs) ']'];
+                        % loopCode = [word '=GDSGE_INTERP_RSLT[' num2str(i_lhs) ']'];
+                        loopCode = [word '=GDSGE_INTERP_RSLT_GDSGE_bracket'];
                         loopCode = my_ccode(my_sym(loopCode));
+                        loopCode = strrep(loopCode, '_GDSGE_bracket', ['[' num2str(i_lhs-1) ']']);
                         loopCode = [loopCode, parseComment];
                         loopCodes = [loopCodes,LINE_BREAK,...
                             loopCode];
