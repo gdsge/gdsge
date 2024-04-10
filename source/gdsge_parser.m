@@ -1962,10 +1962,16 @@ for k=1:num_interp
     gridCode = regexprep(gridCode,['((?<=^)|(?<=\W))' var_interp_name{k} '''('], [var_interp_name{k} '(GDSGE_iter,'],'all');
 end
 
+%{
 % Replace r' to r_GDSGE_GRID[GDSGE_iter]
 % The reason for keeping r_GDSGE_GRID[GDSGE_iter] notation is because matlab parser
 % cannot recognize r(GDSGE_iter) as a left hand side variable
 gridCode = regexprep(gridCode,'''',[fVarPrefix '[GDSGE_iter]']);
+%}
+% Replace r' to r_GDSGE_GRID_GDSGE_iter
+% The commented out block is obsoleted by sym2str
+% so we have to do a repladcement after calling sym2str
+gridCode = regexprep(gridCode,'''',[fVarPrefix '_GDSGE_iter']);
 
 % Replace Xp_GDSGE_GRID[GDSGE_iter] to Xp_GRID(GDSGE_iter)
 for k=1:num_policy
@@ -2024,38 +2030,46 @@ while (loc_start)
     switch operator
         case 'GDSGE_EXPECT'
             loopCode = ['GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=' 'GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '+' transName '((shock)+' num2str(shock_num) '*(GDSGE_iter-1)) * (' loopCode ');'];
+            parsed_code = my_ccode(my_sym(loopCode));
+            parsed_code = strrep(parsed_code, '_GDSGE_iter', '[GDSGE_iter-1]');
             reductionCode = [reductionCode ...
                 'adouble GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=0;' LINE_BREAK ...
                 'for(int GDSGE_iter=1; GDSGE_iter<=' num2str(shock_num) '; GDSGE_iter++)' ...
                 LINE_BREAK '{' LINE_BREAK ...
-                my_ccode(sym(loopCode)) parseComment LINE_BREAK ...
+                parsed_code parseComment LINE_BREAK ...
                 '}'
                 ];
         case 'GDSGE_MIN'
             loopCode = ['GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=' 'MIN(GDSGE_REDUCTION_VALUE' num2str(reductionCounter) ',' loopCode ');'];
+            parsed_code = my_ccode(my_sym(loopCode));
+            parsed_code = strrep(parsed_code, '_GDSGE_iter', '[GDSGE_iter-1]');
             reductionCode = [reductionCode ...
                 'adouble GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=1e20;' LINE_BREAK ...
                 'for(int GDSGE_iter=1; GDSGE_iter<=' num2str(shock_num) '; GDSGE_iter++)' ...
                 LINE_BREAK '{' LINE_BREAK ...
-                my_ccode(sym(loopCode)) parseComment LINE_BREAK ...
+                parsed_code parseComment LINE_BREAK ...
                 '}'
                 ];
         case 'GDSGE_MAX'
             loopCode = ['GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=' 'MAX(GDSGE_REDUCTION_VALUE' num2str(reductionCounter) ',' loopCode ');'];
+            parsed_code = my_ccode(my_sym(loopCode));
+            parsed_code = strrep(parsed_code, '_GDSGE_iter', '[GDSGE_iter-1]');
             reductionCode = [reductionCode ...
                 'adouble GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=-1e20;' LINE_BREAK ...
                 'for(int GDSGE_iter=1; GDSGE_iter<=' num2str(shock_num) '; GDSGE_iter++)' ...
                 LINE_BREAK '{' LINE_BREAK ...
-                my_ccode(sym(loopCode)) parseComment LINE_BREAK ...
+                parsed_code parseComment LINE_BREAK ...
                 '}'
                 ];
         case 'GDSGE_PROD'
             loopCode = ['GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=' 'GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '*' loopCode ';'];
+            parsed_code = my_ccode(my_sym(loopCode));
+            parsed_code = strrep(parsed_code, '_GDSGE_iter', '[GDSGE_iter-1]');
             reductionCode = [reductionCode ...
                 'adouble GDSGE_REDUCTION_VALUE' num2str(reductionCounter) '=1;' LINE_BREAK ...
                 'for(int GDSGE_iter=1; GDSGE_iter<=' num2str(shock_num) '; GDSGE_iter++)' ...
                 LINE_BREAK '{' LINE_BREAK ...
-                my_ccode(sym(loopCode)) parseComment LINE_BREAK ...
+                parsed_code parseComment LINE_BREAK ...
                 '}'
                 ];
     end
@@ -2140,7 +2154,9 @@ while j<length(lines)
     line = lines{j};
     line0 = line;
     parseComment = [' //parsed from gmod Line: ' line0];
+    %{
     try
+    %}
         % Remove comments
         [~,loc_start,loc_end] = regexp(line,'%.*$','tokenExtents','all');
         line(loc_start:loc_end)=[];
@@ -2345,7 +2361,9 @@ while j<length(lines)
                     var_interp_name_extended = [var_interp_name,'GDSGE_INTERP_VEC'];
                     num_interp_extended = num_interp+1;
                     loopCode = replace_grid_variable(rhs,num_interp_extended,var_interp_name_extended,num_policy,var_policy_name,num_shock_var,var_shock_name,f_var_name,fVarPrefix);
-                    loopCode = my_ccode(sym(loopCode));
+                    loopCode = my_ccode(my_sym(loopCode));
+                    % PATCHED for str2sym in R2024a
+                    loopCode = strrep(loopCode, '_GDSGE_iter', '[GDSGE_iter-1]');
                     % Remove the equal bracket
                     loopCode = loopCode(8:end);
                     loopCode = [loopCode, parseComment];
@@ -2359,7 +2377,7 @@ while j<length(lines)
                         word = regexprep(word,'''','');
                         f_var_name{end+1} = word;
                         loopCode = [word '_GDSGE_GRID[GDSGE_iter]=GDSGE_INTERP_RSLT[' num2str(i_lhs) ']'];
-                        loopCode = my_ccode(sym(loopCode));
+                        loopCode = my_ccode(my_sym(loopCode));
                         loopCode = [loopCode, parseComment];
                         loopCodes = [loopCodes,LINE_BREAK,...
                             loopCode];
@@ -2383,7 +2401,7 @@ while j<length(lines)
                         error('GDSGE_INTERP_VEC without prime must take first argument as "shock" or an integer');
                     end
                     loopCodes = '';
-                    loopCode = my_ccode(sym(rhs));
+                    loopCode = my_ccode(my_sym(rhs));
                     % Remove the equal bracket
                     loopCode = loopCode(8:end);
                     loopCodes = [loopCodes,loopCode,LINE_BREAK];
@@ -2395,7 +2413,7 @@ while j<length(lines)
                         word = regexprep(word,'''','');
                         c_var_name{end+1} = word;
                         loopCode = [word '=GDSGE_INTERP_RSLT[' num2str(i_lhs) ']'];
-                        loopCode = my_ccode(sym(loopCode));
+                        loopCode = my_ccode(my_sym(loopCode));
                         loopCode = [loopCode, parseComment];
                         loopCodes = [loopCodes,LINE_BREAK,...
                             loopCode];
@@ -2410,7 +2428,9 @@ while j<length(lines)
                 f_var_name{end+1} = regexprep(words{1},'''','');
                 
                 loopCode = replace_grid_variable(loopCode,num_interp,var_interp_name,num_policy,var_policy_name,num_shock_var,var_shock_name,f_var_name,fVarPrefix);
-                loopCode = my_ccode(sym(loopCode));
+                loopCode = my_ccode(my_sym(loopCode));
+                % PATCHED for str2sym in R2024a
+                loopCode = strrep(loopCode, '_GDSGE_iter', '[GDSGE_iter-1]');
                 loopCode = [loopCode, parseComment];
                 
                 % Replace future to a loop
@@ -2437,9 +2457,12 @@ while j<length(lines)
                 line = replace_grid_variable(line,num_interp,var_interp_name,num_policy,var_policy_name,num_shock_var,var_shock_name,f_var_name,fVarPrefix);
                 
                 if ~contains(words{1},'(')
+                    parsed_code = my_ccode(my_sym(line));
+                    % PATCHED for str2sym in R2024a
+                    parsed_code = strrep(parsed_code, '_GDSGE_iter', '[GDSGE_iter-1]');
                     modelCode = [modelCode ...
                         reductionCode1 reductionCode2 reductionCode3 reductionCode4 LINE_BREAK ...
-                        my_ccode(sym(line)) parseComment ...
+                        parsed_code parseComment ...
                         LINE_BREAK];
                 else
                     % only process rhs
@@ -2447,7 +2470,7 @@ while j<length(lines)
                     assign_lhs = assign_words{1};
                     assign_rhs = assign_words{2};
                     
-                    assign_rhs_c_code = my_ccode(sym(assign_rhs));
+                    assign_rhs_c_code = my_ccode(my_sym(assign_rhs));
                     assign_rhs_c_code_words = strsplit(assign_rhs_c_code,'=');
                     
                     modelCode = [modelCode ...
@@ -2456,6 +2479,7 @@ while j<length(lines)
                 end
             end % Assign to future variable
         end % Assignment
+        %{
     catch ME
         fprintf(2,'Error found in model block, at Line\n%s\n', line0);
         if strcmp(ME.identifier,'symbolic:kernel:RecursiveDefinitionMaxdepth')
@@ -2463,6 +2487,7 @@ while j<length(lines)
         end
         rethrow(ME);
     end
+        %}
 end
 
 %% Declar variables
@@ -2720,14 +2745,22 @@ try
         % This contains future variables
         line = regexprep(line,'''','(GDSGE_iter)');
         line = replace_grid_variable(line,num_interp,var_interp_name,num_policy,var_policy_name,num_shock_var,var_shock_name,f_var_name,fVarPrefix);
-        line = [equationPrefix '[' num2str(num_equations) '+GDSGE_iter]=' line];
-        line = my_ccode(sym(line));
+        % line = [equationPrefix '[' num2str(num_equations) '+GDSGE_iter]=' line];
+        % PATCHED for str2sym in R2024a; first call str2sym then a replacement
+        line = [equationPrefix '=' line];
+        line = my_ccode(my_sym(line));
+        line = strrep(line, '_GDSGE_iter', '[GDSGE_iter-1]');
+        line = my_regexprep(line, equationPrefix, [equationPrefix '[' num2str(num_equations-1) '+GDSGE_iter]']);
         line = get_for_loop_code(shock_num,line,LINE_BREAK);
         num_equations = num_equations+shock_num;
     else
         line = replace_grid_variable(line,num_interp,var_interp_name,num_policy,var_policy_name,num_shock_var,var_shock_name,f_var_name,fVarPrefix);
-        line = [equationPrefix '[' num2str(num_equations+1) ']=' line];
-        line = my_ccode(sym(line));
+        % line = [equationPrefix '[' num2str(num_equations+1) ']=' line];
+        % PATCHED for str2sym in R2024a; first call str2sym then a replacement
+        line = [equationPrefix '=' line];
+        line = my_ccode(my_sym(line));
+        line = strrep(line, '_GDSGE_iter', '[GDSGE_iter-1]');
+        line = my_regexprep(line, equationPrefix, [equationPrefix '[' num2str(num_equations+1-1) ']']);
         line = [line, parseComment];
         num_equations = num_equations+1;
     end
@@ -2951,4 +2984,8 @@ for i=1:length(conds)
     end
 end
 
+end
+
+function expr = my_sym(str)
+expr = str2sym(str);
 end
