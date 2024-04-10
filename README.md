@@ -15,7 +15,7 @@ First, log into your [MATLAB Online](https://matlab.mathworks.com/)
 Then, download the toolbox release and unzip in the MATLAB command window:
 
 ```matlab
-websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/tags/v0.1.3.zip')
+websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/tags/v0.1.4.zip')
 unzip gdsge.zip
 ```
 
@@ -23,7 +23,7 @@ Finally, change directory to the unzipped folder, set up the default mex compile
 
 ```matlab
 mex -setup c++
-cd gdsge-0.1.3/tests
+cd gdsge-0.1.4/tests
 runtests
 ```
 
