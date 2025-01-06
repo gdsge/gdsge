@@ -12,9 +12,6 @@ if ispc
     
     clear BLAS_FILE PATH_DELIMITER GDSGE_TOOLBOX_ROOT
 elseif ismac
-    if exist('./essential_blas.dylib','file') == 0
-        copyfile(which('essential_blas.dylib'),'./');
-    end
 end
 
 %% Iter code starts here

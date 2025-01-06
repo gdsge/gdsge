@@ -183,7 +183,7 @@ if ispp_MATLAB && isMultiVariateSpline
     if isfield(pp,'pieces') && (~isempty(pp.pieces))
        pieces = pp.pieces; 
     else % calculate it from breaks
-        pieces = cellfun(@numel,pp.breaks) - 1;        
+        pieces = cellfun('prodofsize',pp.breaks) - 1;        
     end
     % check dim
     if isfield(pp,'dim') && (~isempty(pp.dim))
@@ -523,7 +523,7 @@ elseif ispp_MKL
     breaks_MKL = breaks;
     coefs_MKL  = pp.coefs;
     order_MKL = int32(pp.order);   % typecasting to int
-    pieces_MKL = int32(cellfun(@numel,breaks_MKL) - 1); % typecasting to int
+    pieces_MKL = int32(cellfun('prodofsize',breaks_MKL) - 1); % typecasting to int
     if isa(indexDim,'int32') % for int32, we assume that the user supplied correct C-type data
         indexDim_MKL = indexDim; % make no adjustment
     else % for other data type, we have to make the adjustment to types and zero-based indexing
@@ -609,11 +609,33 @@ elseif ispp_MKL
        else % need a full construction first           
            % first construct the coefs
            MKL_flag_cons = -MKL_flag;
-           coefs_MKL = myppual_mex(MKL_flag_cons,breaks_MKL,Values_MKL,pieces_MKL,order_MKL,dim_MKL,Method,x,left,indexDim_MKL,index_x_MKL);
+
+           % Dealing with extrapolation
+           extrap_order_MKL = [];
+           if isfield(pp,'ExtrapolationOrder') && (~isempty(pp.ExtrapolationOrder))
+               if ~all(pp.order == 4)
+                    error('SPLINES:MYPPUAL:MKLform','Can only apply extrapolation to cubic splines');
+               end
+               ExtrapolationOrder = pp.ExtrapolationOrder;
+               if isscalar(ExtrapolationOrder)
+                   ExtrapolationOrder = repmat(ExtrapolationOrder,[1,length(pp.breaks)]);
+               end
+               extrap_order_MKL = int32(ExtrapolationOrder);
+
+               % attach new breaks
+               for i_break=1:length(breaks_MKL)
+                   c_break = breaks_MKL{i_break};
+                   c_break = [c_break(1)-1, c_break, c_break(end)+1];
+                   breaks_MKL{i_break} = c_break;
+               end
+               pieces_MKL = pieces_MKL + 2;
+           end
+
+           coefs_MKL = myppual_mex(MKL_flag_cons,breaks_MKL,Values_MKL,pieces_MKL,order_MKL,dim_MKL,Method,x,extrap_order_MKL,indexDim_MKL,index_x_MKL);
            % the final step
            if strcmp(myppual_flag,'cons')
                v = struct('form','MKLpp','breaks',{breaks_MKL},'Values',Values_MKL,'coefs',coefs_MKL,...
-                   'pieces',pieces_MKL,'order',order_MKL,'dim',dim_MKL,'Method',Method,'orient','MKLC');
+                   'pieces',pieces_MKL,'order',order_MKL,'extrap_order',extrap_order_MKL,'dim',dim_MKL,'Method',Method,'orient','MKLC','thread',-MKL_flag_cons);
            elseif strcmp(myppual_flag,'cons_eval_matrix')
                [v,index_x] = myppual_mex(MKL_flag,breaks_MKL,coefs_MKL,pieces_MKL,order_MKL,dim_MKL,Method,x,left,indexDim_MKL,index_x_MKL);
            end
@@ -690,16 +712,16 @@ elseif isobj_griddedInterpolant
     
     % evaluation    
     if isequal(dim,1) && iscell(x) % scalar-valued spline
-        sizev = [1,cellfun(@numel,x,'UniformOutput',true)];
+        sizev = [1,cellfun('prodofsize',x,'UniformOutput',true)];
         x_griddedInterpolant = x;
     elseif isequal(dim,1) && ismatrix(x) % scalar-valued spline
         sizev = [1,size(x,2)];
         x_griddedInterpolant = x.';
     elseif (dim > 1) && iscell(x) && isempty(indexDim) % use the cell form for evaluation
-        sizev = [dim,cellfun(@numel,x,'UniformOutput',true)];
+        sizev = [dim,cellfun('prodofsize',x,'UniformOutput',true)];
         x_griddedInterpolant = [{(1:dim)},x];        
     elseif (dim > 1) && iscell(x) && (~isempty(indexDim)) % need to use the matrix form for evaluation
-        sizev = [size(indexDim,1),cellfun(@numel,x,'UniformOutput',true)];
+        sizev = [size(indexDim,1),cellfun('prodofsize',x,'UniformOutput',true)];
         mx = length(x);
         if isequal(mx,1)
             x_mat  = reshape(x{1},1,[]);

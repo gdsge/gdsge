@@ -44,6 +44,7 @@ if ispc
             copyfile("mingw/asg_mex.mexw64", current_folder);
         case 'MSVC'
             flag2 = [' -DUSE_MKL OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /Z7"'];
+            % flag2 = [' -DEIGEN_DONT_PARALLELIZE OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /Z7"'];
             flag3 = [' LINKOPTIMFLAGS="/DEBUG:FULL"'];
         otherwise
             % default to intel
@@ -80,10 +81,12 @@ elseif isunix && ~ismac
     
     compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 ' "' cppFileName '" -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 elseif ismac
-    mexCommand = 'mex CC=/usr/local/bin/gcc-8 CXX=/usr/local/bin/g++-8';
+    mexCommand = 'mex CC=gcc CXX=g++';
     
-    flag2 = [' CFLAGS="$CFLAGS -w -fopenmp -fpermissive -fexceptions -DUSE_MKL -DADEPT_THREAD_LOCAL=__thread"'];
-    flag3 = [sprintf(' LDFLAGS="$LDFLAGS essential_blas.dylib -w -fopenmp"')];
+    %flag2 = [' CFLAGS="$CFLAGS -w -Xclang -fopenmp -lomp -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread -I/opt/homebrew/opt/libomp/include -L/opt/homebrew/opt/libomp/lib"'];
+    %flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w -Xclang -fopenmp -lomp -L/opt/homebrew/opt/libomp/lib"')];
+    flag2 = [' CFLAGS="$CFLAGS -w  -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread -DNO_OMP"'];
+    flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w"')];
     
     compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 ' "' cppFileName '" -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 end
