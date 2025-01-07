@@ -5,8 +5,7 @@
 
 #pragma once
 
-// #include <unordered_map>
-// #include <map>
+#include <stdexcept>
 #include "flat_hash_map.hpp"
 #include <array>
 #include <algorithm>
@@ -109,14 +108,17 @@ namespace AdaptiveSparseGridInterp {
 		HashFirstDigits(int _digits) {
 			digits = _digits;
 		}
-		size_t operator()(const std::array<T, ASG_MAX_DIM>& a) const
+		uint64_t operator()(const std::array<T, ASG_MAX_DIM>& a) const
 		{
-			size_t h = 0;
-			for (size_t i = 0; i < digits; ++i)
-			{
-				h = h * (helper_pow<ASG_MAX_LEVEL>::pow2() + 1) + (size_t)(a[i] * helper_pow<ASG_MAX_LEVEL>::pow2());
+			uint64_t hash = 1469598103934665603ULL; // FNV offset
+			for (int d = 0; d < digits; d++) {
+				// Multiply coordinate[d] by 65536, cast to 32-bit
+				uint32_t fi = (uint32_t)(a[d] * (1ULL << (ASG_MAX_LEVEL + 1)));
+				// FNV combine
+				hash ^= (uint64_t)fi;
+				hash *= 1099511628211ULL;  // FNV prime
 			}
-			return h;
+			return hash;
 		}
 	};
 
@@ -257,71 +259,6 @@ namespace AdaptiveSparseGridInterp {
 		}
 
 		return totalSurplus;
-	}
-
-	void loop_all_combinations_accumulate_surplus_vec_recursion(int nVec, int nDim, inarray& currentCell, inarray& currentRatio,
-		int currentDim, int currentLevel, int evalMaxLevel, GridInfoMap& info,
-		inarray* cell, inarray* ratio, double* totalSurplus)
-	{
-		for (int i_level = 0; i_level <= evalMaxLevel - currentLevel; i_level++)
-		{
-			currentCell[currentDim] = cell[i_level][currentDim];
-			currentRatio[currentDim] = ratio[i_level][currentDim];
-
-			if (currentDim < nDim - 1)
-			{
-				loop_all_combinations_accumulate_surplus_vec_recursion(nVec, nDim, currentCell, currentRatio,
-					currentDim + 1, currentLevel + i_level, evalMaxLevel, info, cell, ratio, totalSurplus);
-			}
-			else
-			{
-				GridInfoMap::iterator it;
-				it = info.find(currentCell);
-				if (it != info.end())
-				{
-					double ratioProd = 1.0;
-					for (int i_dim = 0; i_dim < nDim; i_dim++)
-					{
-						ratioProd *= currentRatio[i_dim];
-					}
-					for (int i_vec = 0; i_vec < nVec; i_vec++)
-					{
-						totalSurplus[i_vec] += it->second.surplus[i_vec] * ratioProd;
-					}
-				}
-			}
-		}
-	}
-
-	void loop_all_combinations_accumulate_surplus_recursion(int i_vec, int nDim, inarray& currentCell, inarray& currentRatio,
-		int currentDim, int currentLevel, int evalMaxLevel, GridInfoMap& info,
-		inarray* cell, inarray* ratio, double* totalSurplus)
-	{
-		for (int i_level = 0; i_level <= evalMaxLevel - currentLevel; i_level++)
-		{
-			currentCell[currentDim] = cell[i_level][currentDim];
-			currentRatio[currentDim] = ratio[i_level][currentDim];
-
-			if (currentDim < nDim - 1)
-			{
-				loop_all_combinations_accumulate_surplus_recursion(i_vec, nDim, currentCell, currentRatio,
-					currentDim + 1, currentLevel + i_level, evalMaxLevel, info, cell, ratio, totalSurplus);
-			}
-			else
-			{
-				GridInfoMap::iterator it;
-				it = info.find(currentCell);
-				if (it != info.end())
-				{
-					double ratioProd = 1.0;
-					for (int i_dim = 0; i_dim < nDim; i_dim++)
-					{
-						ratioProd *= currentRatio[i_dim];
-					}
-					*totalSurplus += it->second.surplus[i_vec] * ratioProd;
-				}
-			}
-		}
 	}
 
 	class AsgInterp {
