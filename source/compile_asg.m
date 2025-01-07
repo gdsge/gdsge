@@ -1,0 +1,1 @@
+mex -v -Iinclude asg_mex.cpp OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp"

@@ -301,7 +301,7 @@ namespace AdaptiveSparseGridInterp {
 		}
 	}
 
-    	inline
+    inline
 	void loop_all_combinations_accumulate_surplus_adept_no_grad(int i_vec, int nDim,
 		int evalMaxLevel, GridInfoMap& info, std::vector<int>& setOfLevelCombinations,
 		double* cell, double* ratio, double* slope, double* p_totalSurplus)

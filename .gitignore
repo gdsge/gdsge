@@ -3,6 +3,7 @@
 source/@sym/*.m
 source/@sym/private/*.m
 .DS_Store
+.vscode
 
 # For tests
 # Bianchi2011

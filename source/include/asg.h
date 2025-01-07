@@ -50,32 +50,8 @@ namespace AdaptiveSparseGridInterp {
 		CompareFirstDigits(int _digits) {
 			digits = _digits;
 		}
-		/*
-#ifdef _WIN32
-		// windows code goes here
-		bool operator()(const inarray& a, const inarray& b) const {
-			return (std::lexicographical_compare(a.begin(), a.begin() + digits,
-				b.begin(), b.begin() + digits));
-		}
-#else
-		//linux code goes here
-		bool operator()(const inarray& a, const inarray& b) const {
-			return (a < b);
-		}
-#endif
-*/
 
 		bool operator()(const std::array<T, ASG_MAX_DIM>& a, const std::array<T, ASG_MAX_DIM>& b) const {
-			// return (std::lexicographical_compare(a.begin(), a.begin() + digits,
-				// b.begin(), b.begin() + digits));
-			/*
-			for (int i = 0; i < digits ; i++)
-			{
-				if (a[i] < b[i])
-					return true;
-			}
-			return false;
-			*/
 			for (int i = 0; i < digits ; i++)
 			{
 				if (a[i] < b[i])
@@ -144,10 +120,7 @@ namespace AdaptiveSparseGridInterp {
 		}
 	};
 
-
-	// typedef std::map<inarray, GridInfo, CompareFirstDigits<double>> GridInfoMap;
 	typedef ska::flat_hash_map<inarray, GridInfo, HashFirstDigits<double>, EqualFirstDigits<double>> GridInfoMap;
-	// typedef std::unordered_map<inarray, GridInfo, HashFirstDigits<double>, EqualFirstDigits<double>> GridInfoMap;
 	typedef std::set<levelarray, CompareFirstDigits<int>> LevelSet;
 
 	inline int find_pow_base_2(double gridPoint)
@@ -203,57 +176,6 @@ namespace AdaptiveSparseGridInterp {
 		if (evalMaxLevel < 0)
 			return;
 
-		/******
-		// This is obsolete. Levels information is now accesible from info
-		// Loop all levels that sums to maxLevel. This extends the implmentation of
-		// xxx
-		int levels[ASG_MAX_DIM] = {};
-		int index = 0;
-
-		inarray currentCell = {};
-		// inarray currentRatio = {};
-		while (true)
-		{
-			// Implementation for the current combination of levels
-			// Construct current cell
-			for (int i_dim = 0; i_dim < nDim; i_dim++)
-			{
-				currentCell[i_dim] = cell[levels[i_dim]][i_dim];
-				// currentRatio[i_dim] = ratio[levels[i_dim]][i_dim];
-			}
-			GridInfoMap::iterator it = info.find(currentCell);
-			if (it != info.end())
-			{
-				double ratioProd = 1.0;
-				for (int i_dim = 0; i_dim < nDim; i_dim++)
-				{
-					// ratioProd *= currentRatio[i_dim];
-					ratioProd *= ratio[levels[i_dim]][i_dim];
-				}
-				for (int i_vec = 0; i_vec < nVec; i_vec++)
-				{
-					totalSurplus[i_vec] += it->second.surplus[i_vec] * ratioProd;
-				}
-			}
-			// Increment
-			levels[0]++;
-
-			// Carry
-			while (sum_vec(levels, nDim) == evalMaxLevel + 1)
-			{
-				if (index == nDim - 1)
-					return;
-
-				levels[index] = 0;
-				index++;
-				levels[index]++;
-			}
-
-			// Move the pointer to the first level
-			index = 0;
-		}
-		****/
-
 		inarray currentCell = {};
 		int ptr = 0;
 		while (ptr < setOfLevelCombinations.size())
@@ -300,55 +222,6 @@ namespace AdaptiveSparseGridInterp {
 
 		if (evalMaxLevel < 0)
 			return totalSurplus;
-
-		/*******
-		// Obsolete for the same reason
-		// Loop all levels that sums to maxLevel. This extends the implmentation of
-		// xxx
-		int levels[ASG_MAX_DIM] = {};
-		int index = 0;
-
-		inarray currentCell = {};
-		// inarray currentRatio = {};
-		while (true)
-		{
-			// Implementation for the current combination of levels
-			// Construct current cell
-			for (int i_dim = 0; i_dim < nDim; i_dim++)
-			{
-				currentCell[i_dim] = cell[levels[i_dim]][i_dim];
-				// currentRatio[i_dim] = ratio[levels[i_dim]][i_dim];
-			}
-			GridInfoMap::iterator it = info.find(currentCell);
-			if (it != info.end())
-			{
-				double ratioProd = 1.0;
-				for (int i_dim = 0; i_dim < nDim; i_dim++)
-				{
-					// ratioProd *= currentRatio[i_dim];
-					ratioProd *= ratio[levels[i_dim]][i_dim];
-				}
-				totalSurplus += it->second.surplus[i_vec] * ratioProd;
-			}
-
-			// Increment
-			levels[0]++;
-
-			// Carry
-			while (sum_vec(levels, nDim) == evalMaxLevel + 1)
-			{
-				if (index == nDim - 1)
-					return totalSurplus;
-
-				levels[index] = 0;
-				index++;
-				levels[index]++;
-			}
-
-			// Move the pointer to the first level
-			index = 0;
-		}
-		****/
 
 		inarray currentCell = {};
 		int ptr = 0;
@@ -458,7 +331,6 @@ namespace AdaptiveSparseGridInterp {
 		int currentLevel;
 
 		GridInfoMap info = GridInfoMap(16, HashFirstDigits<double>(numDim), EqualFirstDigits<double>(numDim));
-		// GridInfoMap info = GridInfoMap(CompareFirstDigits<double>(numDim));
 		std::vector<inarray> gridsCurrentLevel;
 		std::vector<inarray> gridsNextLevel;
 
@@ -468,25 +340,12 @@ namespace AdaptiveSparseGridInterp {
 		{
 			// evaluate recursively and accumulate surpluses
 			memset(totalSurplus, 0, sizeof(double)*numVec);
-
-			/*
-			inarray currentCell = {};
-			inarray currentRatio = {};
-			loop_all_combinations_accumulate_surplus_vec_recursion(nVec, totalDim, currentCell, currentRatio,
-				0, 0, evalMaxLevel, surplus, cell, ratio, totalSurplus);
-				*/
 			loop_all_combinations_accumulate_surplus_vec(numVec, numDim, evalLevel, info, setOfLevelCombinations, cell, ratio, totalSurplus);
 		}
 
 		double eval(int i_vec, inarray* cell, inarray* ratio, int evalLevel)
 		{
 			// evaluate recursively and accumulate surpluses
-			/*
-			inarray currentCell = {};
-			inarray currentRatio = {};
-			loop_all_combinations_accumulate_surplus_recursion(i_vec, totalDim, currentCell, currentRatio,
-				0, 0, evalMaxLevel, surplus, cell, ratio, &totalSurplus);
-				*/
 			return loop_all_combinations_accumulate_surplus(i_vec, numDim, evalLevel, info, setOfLevelCombinations, cell, ratio);
 		}
 
