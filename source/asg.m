@@ -81,6 +81,14 @@ classdef asg <  handle
             assert_not_empty(this);
             asg_mex('push_eval_results', this.objectHandle, value);
         end
+
+        function push_eval_results_at_valid(this, value, valid)
+            % PUSH_EVAL_RESULTS_AT_VALID(value, valid)
+            % Push evaluation results corresponding to grids returned from
+            % last get_eval_grids method, only push to grids where valid is 1
+            assert_not_empty(this);
+            asg_mex('push_eval_results_at_valid', this.objectHandle, value, valid);
+        end
         
         function push_eval_results_at_grids(this, evalArrayIdx, evalGridsUnscaled, value, currentLevel)
             % PUSH_EVAL_RESULTS_AT_GRIDS(evalArrayIdx, evalGrids, value, currentLevel)
@@ -89,8 +97,6 @@ classdef asg <  handle
             assert_not_empty(this);
             asg_mex('push_eval_results_at_grids', this.objectHandle, evalArrayIdx, evalGridsUnscaled, value, currentLevel);
         end
-        
-
         
         function [grids, surplus, levels, unscaledGrids] = get_grids_info(this)
             % [grids, surplus, order, level, unscaledGrids] =
@@ -241,8 +247,8 @@ classdef asg <  handle
                 
                 gridsSize = size(grids,2);
                 
-                fval1 = interp1.eval_vec(i*ones(1,gridsSize), grids1{i});
-                fval2 = interp2.eval_vec(i*ones(1,gridsSize), grids1{i});
+                fval1 = interp1.eval_vec(i*ones(1,gridsSize), grids);
+                fval2 = interp2.eval_vec(i*ones(1,gridsSize), grids);
                 % Get the minimum numVec
                 minNumVec = min(size(fval2,1),size(fval1,1));
                 % Compute metric

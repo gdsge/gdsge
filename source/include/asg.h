@@ -472,6 +472,53 @@ namespace AdaptiveSparseGridInterp {
 			update_level_combinations();
 		}
 
+		void push_to_info_at_valid(double* _fval, bool* _valid)
+		{
+			std::vector<double> rslt;
+			rslt.reserve(gridsNextLevel.size()*numVec);
+			double* _rslt = rslt.data();
+			search_and_eval_batch_vec_omp(gridsNextLevel.data(), gridsNextLevel.size(), currentLevel, _rslt);
+
+			// Calculate surplus using vectorization
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif
+			for (int i = 0; i < gridsNextLevel.size()*numVec; i++)
+			{
+				_rslt[i] = _fval[i] - _rslt[i];
+			}
+
+			// push to surpluses
+			gridsCurrentLevel.clear();
+			for (int i_grid = 0; i_grid < gridsNextLevel.size(); i_grid++)
+			{
+				if (!_valid[i_grid])
+					continue;
+
+				// Calculate levels of each grid
+				GridInfo infoAtCurrentGrid;
+				const auto currentGrid = gridsNextLevel[i_grid];
+				for (int i_dim = 0; i_dim < numDim ; i_dim++)
+				{
+					infoAtCurrentGrid.levels[i_dim] = calculate_level(currentGrid[i_dim]);
+				}
+
+				// Copy surplus
+				memcpy(infoAtCurrentGrid.surplus.data(), _rslt + i_grid*numVec, numVec * sizeof(double));
+
+#ifdef _WIN32
+				info.emplace(gridsNextLevel[i_grid], infoAtCurrentGrid);
+#else
+				info[gridsNextLevel[i_grid]] = infoAtCurrentGrid;
+#endif
+				gridsCurrentLevel.push_back(currentGrid);
+			}
+
+			currentLevel++;
+
+			update_level_combinations();
+		}
+
 		void push_info_to_grids(double* _grids, int numGrids, double* _fval, int _currentLevel)
 		{
 			// Overwrite gridsNextLevel with grids and push _fval to info

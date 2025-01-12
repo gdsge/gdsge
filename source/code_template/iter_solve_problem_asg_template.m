@@ -66,3 +66,4 @@ while ((max(isnan(GDSGE_F)) || max(GDSGE_F(:))>TolSol) && GDSGE_MinorIter<MaxMin
         GDSGE_MinorIter = GDSGE_MinorIter+1;
     end
 end
+GDSGE_solved = (GDSGE_F<TolSol) & ~isnan(GDSGE_F);

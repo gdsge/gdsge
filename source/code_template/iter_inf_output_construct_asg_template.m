@@ -15,7 +15,7 @@ while GDSGE_ASG_INTERP_NEW.get_current_level < AsgOutputMaxLevel
     
     GDSGE_evalRslts = [OUTPUT_VAR_SEMI_COLON];
     % Fix grids
-    GDSGE_ASG_INTERP_NEW.push_eval_results_at_grids(GDSGE_evalArrayIdx, GDSGE_evalGridsUnscaled, GDSGE_evalRslts, GDSGE_ASG_INTERP_NEW.get_current_level);
+    GDSGE_ASG_INTERP_NEW.push_eval_results_at_grids(GDSGE_evalArrayIdx(GDSGE_solved), GDSGE_evalGridsUnscaled(:, GDSGE_solved), GDSGE_evalRslts(:, GDSGE_solved), GDSGE_ASG_INTERP_NEW.get_current_level);
 end
 
 OUTPUT_INDEX_ASSIGN_CODE

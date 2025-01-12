@@ -189,6 +189,60 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		return;
 	}
 
+	// Push evaluation results
+	if (!strcmp("push_eval_results_at_valid", cmd))
+	{
+		if (nrhs != 4) mexErrMsgTxt("push_eval_results_at_valid: 4 input expected.");
+		if (nlhs != 0) mexErrMsgTxt("push_eval_results_at_valid: 0 output expected.");
+
+		// Get the input vector
+		const mxArray* mx_results = prhs[2];
+		int results_m = mxGetM(mx_results);
+		int results_n = mxGetN(mx_results);
+		double* _results = mxGetPr(mx_results);
+
+		const mxArray* mx_valid = prhs[3];
+		if (!mxIsLogical(mx_valid))
+			mexErrMsgTxt("valid must be a logical array");
+		int valid_m = mxGetM(mx_valid);
+		int valid_n = mxGetN(mx_valid);
+		bool* _valid = (bool*)mxGetData(mx_valid);
+
+		// Check if the size is correct
+		// Count grids
+		int totalNumGridPoints = 0;
+		std::vector<int> numGridPoints;
+		numGridPoints.reserve(numArray);
+		for (int i = 0; i < numArray; i++)
+		{
+			AsgInterp& interp = interpArray->interps[i];
+			int gridSize = interp.gridsNextLevel.size();
+			totalNumGridPoints += gridSize;
+			numGridPoints.push_back(gridSize);
+		}
+
+		// Check if num of rows is consistent
+		if (results_m != nVec)
+			mexErrMsgTxt("results do not agree with number of vector functions");
+		if (results_n != totalNumGridPoints)
+			mexErrMsgTxt("results do not agree with number of points to be evaluated");
+		if (valid_m != 1)
+			mexErrMsgTxt("valid should be a row vector");
+		if (valid_n != totalNumGridPoints)
+			mexErrMsgTxt("valid do not agree with number of points to be evaluated");
+
+		double* ptr = _results;
+		bool* ptr_valid = _valid;
+		for (int i = 0; i < numArray; i++)
+		{
+			AsgInterp& interp = interpArray->interps[i];
+			interp.push_to_info_at_valid(ptr, ptr_valid);
+			ptr += numGridPoints[i] * nVec;
+			ptr_valid += numGridPoints[i];
+		}
+		return;
+	}
+
 	// Push evaluation results once for all
 	if (!strcmp("push_eval_results_at_grids", cmd))
 	{
@@ -312,6 +366,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		int sites_m = mxGetM(mx_sites);
 		int numSites = mxGetN(mx_sites);
 
+		if (numSites == 0 || sites_m == 0)
+			mexErrMsgTxt("sites cannot be empty");
 		if (sites_m != nDim)
 			mexErrMsgTxt("sites dimension error");
 

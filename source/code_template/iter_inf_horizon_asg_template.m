@@ -58,11 +58,11 @@ while(~stopFlag)
         
         GDSGE_evalRslts = [INTERP_VAR_SEMI_COLON];
         
-        GDSGE_SOL_ASG_INTERP_NEW.push_eval_results_at_grids(GDSGE_evalArrayIdx, GDSGE_evalGridsUnscaled, GDSGE_SOL, GDSGE_SOL_ASG_INTERP_NEW.get_current_level);
+        GDSGE_SOL_ASG_INTERP_NEW.push_eval_results_at_grids(GDSGE_evalArrayIdx(GDSGE_solved), GDSGE_evalGridsUnscaled(:, GDSGE_solved), GDSGE_SOL(:, GDSGE_solved), GDSGE_SOL_ASG_INTERP_NEW.get_current_level);
         if GDSGE_ASG_FIX_GRID==1
             GDSGE_ASG_INTERP_NEW.push_eval_results_at_grids(GDSGE_evalArrayIdx, GDSGE_evalGridsUnscaled, GDSGE_evalRslts, GDSGE_ASG_INTERP_NEW.get_current_level);
         else
-            GDSGE_ASG_INTERP_NEW.push_eval_results(GDSGE_evalRslts);
+            GDSGE_ASG_INTERP_NEW.push_eval_results_at_valid(GDSGE_evalRslts, GDSGE_solved);
         end
         GDSGE_ASG_STORE_evalArrayIdx = [GDSGE_ASG_STORE_evalArrayIdx,GDSGE_evalArrayIdx];
         GDSGE_ASG_STORE_evalGridsUnscaled = [GDSGE_ASG_STORE_evalGridsUnscaled,GDSGE_evalGridsUnscaled];
@@ -88,10 +88,6 @@ while(~stopFlag)
     end
     
     if ( mod(GDSGE_Iter,SaveFreq)==0 || stopFlag == true )
-        % Construct output
-        % GDSGE_ASG_OUTPUT = asg({STATE_COMMA},GDSGE_NUM_OUTPUT,shock_num);
-        % OUTPUT_xxx_CONSTRUCT_CODE
-        
         % Solve the problem and get output variables
         GDSGE_ASG_HANDLE = GDSGE_ASG_INTERP.objectHandle;
         GDSGE_ASG_INTERP_NEW = asg({STATE_COMMA},GDSGE_NUM_OUTPUT,shock_num);

@@ -41,6 +41,7 @@ if ~SkipModelInit
         % Map variables to initial interp
         INTERP_INITIALIZE_CODE
         GDSGE_evalRslts = [INTERP_VAR_SEMI_COLON];
-        GDSGE_ASG_INTERP.push_eval_results(GDSGE_evalRslts);
+        GDSGE_solved = (GDSGE_F<TolSol) & ~isnan(GDSGE_F);
+        GDSGE_ASG_INTERP.push_eval_results_at_valid(GDSGE_evalRslts, GDSGE_solved);
     end
 end

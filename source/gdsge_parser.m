@@ -757,11 +757,7 @@ policyInitInitializeCode = [policyInitInitializeCode ...
     ];
 
 policyInitializeCode = '';
-%{
-policyInitializeCode = [policyInitializeCode ...
-    'GDSGE_X0_MODEL_ID = (GDSGE_LB_MODEL_ID+GDSGE_UB_MODEL_ID)/2;' LINE_BREAK ...
-    ];
-%}
+
 interpInitializeCode = '';
 for j=1:num_interp
     % Check whether add default initialization and assign
