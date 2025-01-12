@@ -124,6 +124,7 @@ namespace AdaptiveSparseGridInterp {
 
 	typedef ska::flat_hash_map<inarray, GridInfo, HashFirstDigits<double>, EqualFirstDigits<double>> GridInfoMap;
 	typedef std::set<levelarray, CompareFirstDigits<int>> LevelSet;
+	typedef std::set<inarray, CompareFirstDigits<double>> GridSet;
 
 	inline int find_pow_base_2(double gridPoint)
 	{
@@ -149,6 +150,14 @@ namespace AdaptiveSparseGridInterp {
 		{
 			return find_pow_base_2(gridPoint);
 		}
+	}
+
+	inline int calculate_total_levels(inarray grid, int dim)
+	{
+		int totalLevels = 0;
+		for (int i = 0; i < dim; i++)
+			totalLevels += calculate_level(grid[i]);
+		return totalLevels;
 	}
 
 	inline int sum_vec(const int* vec, int dim)
@@ -268,7 +277,8 @@ namespace AdaptiveSparseGridInterp {
 		int currentLevel;
 
 		GridInfoMap info = GridInfoMap(16, HashFirstDigits<double>(numDim), EqualFirstDigits<double>(numDim));
-		std::vector<inarray> gridsCurrentLevel;
+		std::vector<inarray> gridsAll;
+		// std::vector<inarray> gridsCurrentLevel;
 		std::vector<inarray> gridsNextLevel;
 
 		std::vector<int> setOfLevelCombinations;
@@ -458,6 +468,7 @@ namespace AdaptiveSparseGridInterp {
 
 				// Copy surplus
 				memcpy(infoAtCurrentGrid.surplus.data(), _rslt + i_grid*numVec, numVec * sizeof(double));
+				gridsAll.push_back(currentGrid);
 
 #ifdef _WIN32
 				info.emplace(gridsNextLevel[i_grid], infoAtCurrentGrid);
@@ -467,7 +478,7 @@ namespace AdaptiveSparseGridInterp {
 			}
 
 			currentLevel++;
-			gridsCurrentLevel = gridsNextLevel;
+			// gridsCurrentLevel = gridsNextLevel;
 
 			update_level_combinations();
 		}
@@ -489,7 +500,6 @@ namespace AdaptiveSparseGridInterp {
 			}
 
 			// push to surpluses
-			gridsCurrentLevel.clear();
 			for (int i_grid = 0; i_grid < gridsNextLevel.size(); i_grid++)
 			{
 				if (!_valid[i_grid])
@@ -511,7 +521,7 @@ namespace AdaptiveSparseGridInterp {
 #else
 				info[gridsNextLevel[i_grid]] = infoAtCurrentGrid;
 #endif
-				gridsCurrentLevel.push_back(currentGrid);
+				gridsAll.push_back(currentGrid);
 			}
 
 			currentLevel++;
@@ -539,6 +549,7 @@ namespace AdaptiveSparseGridInterp {
 		void construct_grids_next_level(double threshhold)
 		{
 			gridsNextLevel.clear();
+			int nextLevel = currentLevel + 1;
 
 			// Find the neighbor points and push to gridsNextLevel
 			if (currentLevel == -1)
@@ -552,9 +563,9 @@ namespace AdaptiveSparseGridInterp {
 			}
 			else
 			{
-				for (int i_grid = 0; i_grid < gridsCurrentLevel.size(); i_grid++)
+				for (int i_grid = 0; i_grid < gridsAll.size() ; i_grid++)
 				{
-					inarray currentGrid = gridsCurrentLevel[i_grid];
+					inarray currentGrid = gridsAll[i_grid];
 					// Short-circuiting, if threshhold is 0.0, then add grids unconditionally
 					if (threshhold == 0.0 || max_abs(info.at(currentGrid).surplus.data(), numVec) >= threshhold)
 					{
@@ -564,27 +575,33 @@ namespace AdaptiveSparseGridInterp {
 							if (currentGrid[i_dim] == 0.5)
 							{
 								nextGrid[i_dim] = 0.0;
-								gridsNextLevel.push_back(nextGrid);
+								if (calculate_total_levels(nextGrid, numDim) == nextLevel)
+									gridsNextLevel.push_back(nextGrid);
 								nextGrid[i_dim] = 1.0;
-								gridsNextLevel.push_back(nextGrid);
+								if (calculate_total_levels(nextGrid, numDim) == nextLevel)
+									gridsNextLevel.push_back(nextGrid);
 							}
 							else if (currentGrid[i_dim] == 0.0)
 							{
 								nextGrid[i_dim] = 0.25;
-								gridsNextLevel.push_back(nextGrid);
+								if (calculate_total_levels(nextGrid, numDim) == nextLevel)
+									gridsNextLevel.push_back(nextGrid);
 							}
 							else if (currentGrid[i_dim] == 1.0)
 							{
 								nextGrid[i_dim] = 0.75;
-								gridsNextLevel.push_back(nextGrid);
+								if (calculate_total_levels(nextGrid, numDim) == nextLevel)
+									gridsNextLevel.push_back(nextGrid);
 							}
 							else
 							{
 								double neighborNextLevel = pow(0.5, find_pow_base_2(currentGrid[i_dim]) + 1);
 								nextGrid[i_dim] = currentGrid[i_dim] - neighborNextLevel;
-								gridsNextLevel.push_back(nextGrid);
+								if (calculate_total_levels(nextGrid, numDim) == nextLevel)
+									gridsNextLevel.push_back(nextGrid);
 								nextGrid[i_dim] = currentGrid[i_dim] + neighborNextLevel;
-								gridsNextLevel.push_back(nextGrid);
+								if (calculate_total_levels(nextGrid, numDim) == nextLevel)
+									gridsNextLevel.push_back(nextGrid);
 							}
 						}
 					}

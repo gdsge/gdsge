@@ -426,22 +426,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		for (int i_array = 0; i_array < numArray ; i_array++)
 		{
 			AsgInterp& interp = interpArray->interps[i_array];
-			std::vector<inarray>& gridsCurrentLevel = interp.gridsCurrentLevel;
-			std::vector<inarray>& gridsNextLevel = interp.gridsNextLevel;
-			mxArray* mx_gridsCurrentLevel = mxCreateDoubleMatrix(nDim, gridsCurrentLevel.size(), mxREAL);
-			double* _gridsCurrentLevel = mxGetPr(mx_gridsCurrentLevel);
+			auto& gridsAll = interp.gridsAll;
+			auto& gridsNextLevel = interp.gridsNextLevel;
+			mxArray* mx_gridsAll = mxCreateDoubleMatrix(nDim, gridsAll.size(), mxREAL);
+			double* _gridsAll = mxGetPr(mx_gridsAll);
 			mxArray* mx_gridsNextLevel = mxCreateDoubleMatrix(nDim, gridsNextLevel.size(), mxREAL);
 			double* _gridsNextLevel = mxGetPr(mx_gridsNextLevel);
-			for (int i_grid = 0; i_grid < gridsCurrentLevel.size() ; i_grid++)
+			for (int i_grid = 0; i_grid < gridsAll.size() ; i_grid++)
 			{
-				memcpy(_gridsCurrentLevel + i_grid*nDim, gridsCurrentLevel[i_grid].data(), sizeof(double)*nDim);
+				memcpy(_gridsAll + i_grid*nDim, gridsAll[i_grid].data(), sizeof(double)*nDim);
 			}
 			for (int i_grid = 0; i_grid < gridsNextLevel.size(); i_grid++)
 			{
 				memcpy(_gridsNextLevel + i_grid*nDim, gridsNextLevel[i_grid].data(), sizeof(double)*nDim);
 			}
 			// Set cell
-			mxSetCell(plhs[0], i_array, mx_gridsCurrentLevel);
+			mxSetCell(plhs[0], i_array, mx_gridsAll);
 			mxSetCell(plhs[1], i_array, mx_gridsNextLevel);
 		}
 		return;
@@ -456,7 +456,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		const mxArray* mx_grids = prhs[3];
 		const mxArray* mx_surplus = prhs[4];
 		const mxArray* mx_levels = prhs[5];
-		const mxArray* mx_gridsCurrentLevel = prhs[6];
+		const mxArray* mx_gridsAll = prhs[6];
 		const mxArray* mx_gridsNextLevel = prhs[7];
 		
 		// The routine does not check consistency of input (i.e., grids should be cell), make sure this is only called from the matlab class file
@@ -481,9 +481,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			double* _surplus = mxGetPr(mxGetCell(mx_surplus, i_array));
 			double* _levels = mxGetPr(mxGetCell(mx_levels, i_array));
 
-			const mxArray* mx_gridsCurrentLevel_i_array = mxGetCell(mx_gridsCurrentLevel, i_array);
-			int nGridsCurrentLevel = mxGetN(mx_gridsCurrentLevel_i_array);
-			double* _gridsCurrentLevel = mxGetPr(mx_gridsCurrentLevel_i_array);
+			const mxArray* mx_gridsAll_i_array = mxGetCell(mx_gridsAll, i_array);
+			int nGridsAll = mxGetN(mx_gridsAll_i_array);
+			double* _gridsAll = mxGetPr(mx_gridsAll_i_array);
 			
 			const mxArray* mx_gridsNextLevel_i_array = mxGetCell(mx_gridsNextLevel, i_array);
 			int nGridsNextLevel = mxGetN(mx_gridsNextLevel_i_array);
@@ -509,12 +509,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			interp.update_level_combinations();
 
 			// Write the gridsCurrent and gridsNext information
-			interp.gridsCurrentLevel.reserve(nGridsCurrentLevel);
-			for (int i_grid = 0; i_grid < nGridsCurrentLevel ; i_grid++)
+			interp.gridsAll.reserve(nGridsAll);
+			for (int i_grid = 0; i_grid < nGridsAll ; i_grid++)
 			{
 				inarray grid = {};
-				memcpy(grid.data(), _gridsCurrentLevel + i_grid*nDim, sizeof(double)*nDim);
-				interp.gridsCurrentLevel.push_back(grid);
+				memcpy(grid.data(), _gridsAll + i_grid*nDim, sizeof(double)*nDim);
+				interp.gridsAll.push_back(grid);
 			}
 
 			interp.gridsNextLevel.reserve(nGridsNextLevel);
