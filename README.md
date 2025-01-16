@@ -8,7 +8,9 @@ The toolbox can be used to solve models in macroeconomics, international finance
 
 See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 
-## Run on MATLAB Online
+## Run on MATLAB Online (Obsolete)
+
+** The toolbox is temporarily dropping support for use within MATLAB Online, as MATLAB Online no longer allows for MEX file compilation starting from R2024b.**
 
 First, log into your [MATLAB Online](https://matlab.mathworks.com/)
 
@@ -31,15 +33,20 @@ This produces all results in the companion paper [Cao, Luo and Nie (2023)]( http
 
 ## Requirements for the local compiler
 
-* Windows / macOS
+* Windows
+  - MATLAB 2017b+. 
+  - MATLAB toolboxes: Symbolic Math
+  - Compiler: MinGW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
+* macOS (silicon processor): 
+  * MATLAB silicon version (R2023b+).
+  * MATLAB toolboxes: Symbolic Math
+  * Compiler: Xcode
 
-* MATLAB ver>=2017b. MATLAB toolboxes: Symbolic Math, Curve Fitting
+* macOS (Intel processor):
+  * MATLAB 2017b+. 
+  * MATLAB toolboxes: Symbolic Math
+  * Compiler: g++ 8.5; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md)
 
-* One of the following C++ compilers:
-  * Windows: MinGW64 C++ (installed via MATLAB Add-Ons); Visual Studio C++ Compiler 2019, 2022 (community version is fine); Intel C++ Compiler 2017 or newer
-  * Linux: g++; [MATLAB online](https://matlab.mathworks.com/)
-  * macOS: g++8.5 (installed via homebrew; see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md))
-    * macOS with Apple Silicon processors is not supported.
 
 ## Installation of the local compiler
 
@@ -48,8 +55,6 @@ First, Configure your mex C++ compiler by running in MATLAB
   ```matlab
   mex -setup c++
   ```
-
-(For macOS users, see [the instruction for how to setup the g++8.5 compiler](README_compiler_macOS.md).)
 
 Then, acquire the source code by cloning the git repository (*the local folder name should not contain spaces*):
 
@@ -77,7 +82,7 @@ which will generate all the source codes and call the C++ compiler to compile th
 
 GDSGE is released under the Apache License, Version 2.0,  which is available at http://www.apache.org/licenses/LICENSE-2.0. In short, this license allows you to use, compose and distribute the GDSGE compiler or generated codes freely. However, it is requested that the companion paper be cited:
 
-**Dan Cao, Wenlan Luo, and Guangyu Nie (2023). Global DSGE models. Review of Economic Dynamics, forthcoming. Available at: https://www.sciencedirect.com/science/article/pii/S1094202523000017**
+**Dan Cao, Wenlan Luo, and Guangyu Nie (2023). Global DSGE models. Review of Economic Dynamics, Volume 51, December 2023. Available at: https://www.sciencedirect.com/science/article/pii/S1094202523000017**
 
 GDSGE relies on the following external libraries, with their licenses described below and attached under folder licenses/:
 

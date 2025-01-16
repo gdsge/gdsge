@@ -1989,6 +1989,9 @@ reductionCode = '';
 parseComment = '';
 % Search for GDSGE_EXPECT
 loc_start = regexp(seg,[operator '{'],'all');
+if length(loc_start)>1
+    error('Can only contain one GDSGE_EXPECT in one line. Consider constructing an intermediate variable?')
+end
 % Search for end
 for loc_end=loc_start:length(seg)
     if seg(loc_end) == '}'
