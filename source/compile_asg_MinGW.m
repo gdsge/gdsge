@@ -1,0 +1,1 @@
+mex -v -outdir mingw -Iinclude asg_mex.cpp OPTIMFLAGS="-O2 -DNDEBUG" COMPFLAGS="$COMPFLAGS -fopenmp -DNDEBUG -fpermissive -DADEPT_THREAD_LOCAL=__thread"
