@@ -159,6 +159,17 @@ for i=1:length(allDefineStrings)
     code = regexprep(code,[BEFORE_A_WORD,macroName{i},AFTER_A_WORD],macroValue{i});
 end
 
+%% Process macro: #strcat_comma{}
+% example #strcat_comma('K', 1:5) expands to #mat{strip(strjoin(strcat('K',strsplit(num2str([1:5])),',')),',')}
+% which expands to "K1, K2, K3, K4, K5"
+code = process_strcat_comma(code);
+
+%% Process macro: #mat{}
+% the "#mat{}" macro evaluates and interpolates the results as strings and insert
+% It is expanded after #define, so can use #defined macro variable
+% e.g., #mat{strip(strjoin(strcat('K',strsplit(num2str([1:5])),',')),',')} is replaced with "K1, K2, K3, K4, K5"
+code = process_mat_str(code);
+
 %% Process macro: #foreach ... #end block
 code = rec_extract_loop_seg(code);
 
@@ -2196,6 +2207,9 @@ while j<length(lines)
             words = strsplit(line,{' ','='});
             % Get counter of the for block
             counter_var_name = words{2};
+            if ismember(counter_var_name,{'i'})
+                error('cannot use reserved word %s as counter in for-loops', counter_var_name);
+            end
             range_name = words{3};
             
             % Split range
@@ -2980,7 +2994,32 @@ for i=1:length(conds)
         code = strrep(code,code0(condStarts(i):condEnds(i)),conds{i}{2});
     end
 end
+end
 
+function code = process_strcat_comma(code)
+    code0 = code;
+    regex = '#strcat_comma\{([^{}]*),([^{}]*)\}';
+    conds = regexp(code,regex,'tokens');
+    condStarts = regexp(code,regex,'start');
+    condEnds = regexp(code,regex,'end');
+    for i=1:length(conds)
+        args = conds{i}{1};
+        nums = eval(conds{i}{2});
+        nums_str = strsplit(num2str(nums),' ');
+        nums_with_bracket = strcat('(',nums_str,')');
+        code = strrep(code,code0(condStarts(i):condEnds(i)),strip(strjoin(strcat(args,nums_with_bracket,',')),','));
+    end
+end
+
+function code = process_mat_str(code)
+    code0 = code;
+    regex = '#mat{([^\n]*)}';
+    conds = regexp(code,regex,'tokens');
+    condStarts = regexp(code,regex,'start');
+    condEnds = regexp(code,regex,'end');
+    for i=1:length(conds)
+        code = strrep(code,code0(condStarts(i):condEnds(i)),string(eval(conds{i}{1})));
+    end
 end
 
 function expr = my_sym(str)
