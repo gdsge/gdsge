@@ -2,22 +2,20 @@
 
 ## The GDSGE Toolbox
 
-GDSGE is a toolbox that solves nonlinear Dynamic Stochastic General Equilibrium (DSGE) models with a global method based on the Simultaneous Transition and Policy Function Iteration (STPFI) algorithm introduced in [Cao, Luo, and Nie (2020)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3569013). It allows users to define economic models in compact and intuitive scripts, called gmod files (gmod stands for global model). It parses the scripts into dynamic libraries which implement the actual computations (policy function iterations and Monte Carlo simulations) efficiently in C++, and provides a convenient MATLAB interface to researchers.
+GDSGE is a toolbox that solves nonlinear Dynamic Stochastic General Equilibrium (DSGE) models with a global method based on the Simultaneous Transition and Policy Function Iteration (STPFI) algorithm introduced in [Cao, Luo and Nie (2023)]( https://www.sciencedirect.com/science/article/pii/S1094202523000017). It allows users to define economic models in compact and intuitive scripts, called gmod files (gmod stands for global model). It parses the scripts into dynamic libraries which implement the actual computations (policy function iterations and Monte Carlo simulations) efficiently in C++, and provides a convenient MATLAB interface to researchers.
 
 The toolbox can be used to solve models in macroeconomics, international finance, asset pricing, and related fields.
 
 See the [toolbox website for examples and documentation](http://www.gdsge.com/).
 
-## Run on MATLAB Online (Obsolete)
-
-** The toolbox is temporarily dropping support for use within MATLAB Online, as MATLAB Online no longer allows for MEX file compilation starting from R2024b.**
+## Run on MATLAB Online
 
 First, log into your [MATLAB Online](https://matlab.mathworks.com/)
 
 Then, download the toolbox release and unzip in the MATLAB command window:
 
 ```matlab
-websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/tags/v0.1.4.zip')
+websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/tags/v0.1.5.zip')
 unzip gdsge.zip
 ```
 
@@ -25,7 +23,7 @@ Finally, change directory to the unzipped folder, set up the default mex compile
 
 ```matlab
 mex -setup c++
-cd gdsge-0.1.4/tests
+cd gdsge-0.1.5/tests
 runtests
 ```
 
