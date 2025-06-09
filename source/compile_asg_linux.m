@@ -1,0 +1,1 @@
+mex -v -Iinclude asg_mex.cpp CXXFLAGS="$CXXFLAGS -fopenmp" LDFLAGS="$LDFLAGS -fopenmp"
