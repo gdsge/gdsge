@@ -38,7 +38,7 @@ This produces all results in the companion paper [Cao, Luo and Nie (2023)]( http
 * macOS (silicon processor): 
   * MATLAB silicon version (R2023b+).
   * MATLAB toolboxes: Symbolic Math
-  * Compiler: Xcode
+  * Compiler: g++ 15; see [the instruction for how to setup the g++ compiler for Apple silicon processors](README_compiler_macOS_silicon.md)
 
 * macOS (Intel processor):
   * MATLAB 2017b+. 

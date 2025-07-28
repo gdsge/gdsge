@@ -1,0 +1,1 @@
+mex CFLAGS="$CFLAGS -w -fpermissive -fexceptions -fopenmp" LDFLAGS="$LDFLAGS -w -lomp" asg_mex.cpp -I./include

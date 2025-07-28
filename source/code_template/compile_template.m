@@ -81,12 +81,10 @@ elseif isunix && ~ismac
     
     compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 ' "' cppFileName '" -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 elseif ismac
-    mexCommand = 'mex CC=gcc CXX=g++';
+    mexCommand = 'mex';
     
-    %flag2 = [' CFLAGS="$CFLAGS -w -Xclang -fopenmp -lomp -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread -I/opt/homebrew/opt/libomp/include -L/opt/homebrew/opt/libomp/lib"'];
-    %flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w -Xclang -fopenmp -lomp -L/opt/homebrew/opt/libomp/lib"')];
-    flag2 = [' CFLAGS="$CFLAGS -w  -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread -DNO_OMP"'];
-    flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w"')];
+    flag2 = [' CFLAGS="$CFLAGS -w -fopenmp -fpermissive -fexceptions -DADEPT_THREAD_LOCAL=__thread"'];
+    flag3 = [sprintf(' LDFLAGS="$LDFLAGS -w -lomp"')];
     
     compileString = [mexCommand ' ' flag0 flag1 flag2 flag3 ' "' cppFileName '" -outdir "' current_folder '"' ' -I"INCLUDE_FOLDER"'];
 end
