@@ -38,24 +38,28 @@ if nargin>=1 && isfield(GDSGE_OPTIONS,'WarmUp')
         GDSGE_SOL = GDSGE_OPTIONS.WarmUp.GDSGE_SOL;
     end
     if REUSE_WARMUP_SOL==1 && isfield(GDSGE_OPTIONS.WarmUp,'GDSGE_PROB') && size(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_SOL,1)==size(GDSGE_SOL,1)
-        if INTERP_WARMUP_SOL==1 && shock_num>=4
-        % Interpolate SOL, LB, and UB
-        GDSGE_TEMP = v2struct(RSLT_STATE,GDSGE_SIZE_STATE);
-        GDSGE_SIZE_STATE = num2cell(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_SIZE);
-        v2struct(GDSGE_OPTIONS.WarmUp.var_state);
-        GDSGE_SOL_interp=struct('form','MKL','breaks',{{[1:shock_num],RSLT_STATE}},'Values',reshape(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_SOL,[],GDSGE_SIZE_STATE{:}),'coefs',[],'order',[2*ones(1,length(GDSGE_SIZE_STATE))],'Method',[],'ExtrapolationOrder',[],'thread',NumThreads,'orient','curvefit');
-        GDSGE_SOL_interp=myppual(GDSGE_SOL_interp);
-        GDSGE_LB_interp=struct('form','MKL','breaks',{{[1:shock_num],RSLT_STATE}},'Values',reshape(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_LB,[],GDSGE_SIZE_STATE{:}),'coefs',[],'order',[2*ones(1,length(GDSGE_SIZE_STATE))],'Method',[],'ExtrapolationOrder',[],'thread',NumThreads,'orient','curvefit');
-        GDSGE_LB_interp=myppual(GDSGE_LB_interp);
-        GDSGE_UB_interp=struct('form','MKL','breaks',{{[1:shock_num],RSLT_STATE}},'Values',reshape(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_UB,[],GDSGE_SIZE_STATE{:}),'coefs',[],'order',[2*ones(1,length(GDSGE_SIZE_STATE))],'Method',[],'ExtrapolationOrder',[],'thread',NumThreads,'orient','curvefit');
-        GDSGE_UB_interp=myppual(GDSGE_UB_interp);
-        
-        v2struct(GDSGE_TEMP);
-        GDSGE_SOL = reshape(myppual(GDSGE_SOL_interp,[GDSGE_TENSOR_shockIdx(:)';STATE_SEMI_COLON]),size(GDSGE_SOL));
-        GDSGE_LB_NEW = reshape(myppual(GDSGE_LB_interp,[GDSGE_TENSOR_shockIdx(:)';STATE_SEMI_COLON]),size(GDSGE_LB));
-        GDSGE_UB_NEW = reshape(myppual(GDSGE_UB_interp,[GDSGE_TENSOR_shockIdx(:)';STATE_SEMI_COLON]),size(GDSGE_UB));
-        
-        WARMUP_BOUND_ADAPTIVE_CODE
+        if INTERP_WARMUP_SOL==1
+            if shock_num>=2
+                % Interpolate SOL, LB, and UB
+                GDSGE_TEMP = v2struct(RSLT_STATE,GDSGE_SIZE_STATE);
+                GDSGE_SIZE_STATE = num2cell(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_SIZE);
+                v2struct(GDSGE_OPTIONS.WarmUp.var_state);
+                GDSGE_SOL_interp=struct('form','MKL','breaks',{{[1:shock_num],RSLT_STATE}},'Values',reshape(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_SOL,[],GDSGE_SIZE_STATE{:}),'coefs',[],'order',[2*ones(1,length(GDSGE_SIZE_STATE))],'Method',[],'ExtrapolationOrder',[],'thread',NumThreads,'orient','curvefit');
+                GDSGE_SOL_interp=myppual(GDSGE_SOL_interp);
+                GDSGE_LB_interp=struct('form','MKL','breaks',{{[1:shock_num],RSLT_STATE}},'Values',reshape(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_LB,[],GDSGE_SIZE_STATE{:}),'coefs',[],'order',[2*ones(1,length(GDSGE_SIZE_STATE))],'Method',[],'ExtrapolationOrder',[],'thread',NumThreads,'orient','curvefit');
+                GDSGE_LB_interp=myppual(GDSGE_LB_interp);
+                GDSGE_UB_interp=struct('form','MKL','breaks',{{[1:shock_num],RSLT_STATE}},'Values',reshape(GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_UB,[],GDSGE_SIZE_STATE{:}),'coefs',[],'order',[2*ones(1,length(GDSGE_SIZE_STATE))],'Method',[],'ExtrapolationOrder',[],'thread',NumThreads,'orient','curvefit');
+                GDSGE_UB_interp=myppual(GDSGE_UB_interp);
+                
+                v2struct(GDSGE_TEMP);
+                GDSGE_SOL = reshape(myppual(GDSGE_SOL_interp,[GDSGE_TENSOR_shockIdx(:)';STATE_SEMI_COLON]),size(GDSGE_SOL));
+                GDSGE_LB_NEW = reshape(myppual(GDSGE_LB_interp,[GDSGE_TENSOR_shockIdx(:)';STATE_SEMI_COLON]),size(GDSGE_LB));
+                GDSGE_UB_NEW = reshape(myppual(GDSGE_UB_interp,[GDSGE_TENSOR_shockIdx(:)';STATE_SEMI_COLON]),size(GDSGE_UB));
+                
+                WARMUP_BOUND_ADAPTIVE_CODE
+            else
+                error('WarmUp solution can only be applied with shock_num>=2. Please set REUSE_WARMUP_SOL=0.')
+            end
         else
             if isfield(GDSGE_OPTIONS.WarmUp.GDSGE_PROB,'GDSGE_SOL')
             GDSGE_SOL = GDSGE_OPTIONS.WarmUp.GDSGE_PROB.GDSGE_SOL;
