@@ -1,0 +1,40 @@
+# --- Python (uv-managed, alt SymPy backend) ---
+pyext/.venv/
+.venv/
+__pycache__/
+*.py[cod]
+.python-version
+
+# --- Generated GDSGE artifacts ---
+mex_*.cpp
+mex_*.mexw64
+mex_*.mexa64
+mex_*.mexmaca64
+mex_*.mexmaci64
+mex_*.cache
+iter_*.m
+simulate_*.m
+compile_*.m
+init_iter_*.m
+set_params_*.m
+prepare_space_*.m
+construct_spline_*.m
+solve_and_assign_*.m
+*.cache
+gdsge_*.cpp
+gdsge_*.mex*
+IterRslt_*.mat
+SmltRslt_*.mat
+SimuRslt_*.mat
+
+# --- Test outputs ---
+tests/results/
+*.png
+
+# --- Editor / OS cruft ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.asv
+*.m~

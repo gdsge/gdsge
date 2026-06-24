@@ -1,0 +1,17 @@
+[project]
+name = "gdsge-sympy"
+version = "0.0.0"
+description = "SymPy analytic-Jacobian code generation for the GDSGE alt backend"
+requires-python = ">=3.12"
+dependencies = ["sympy>=1.12"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+# Make the gdsge_sympy package importable from pyext/ without an install step
+# (matches how ensurePyenv.m inserts pyext/ onto py sys.path).
+pythonpath = ["."]
+
+[tool.uv]
+package = false

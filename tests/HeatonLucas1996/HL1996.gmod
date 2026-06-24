@@ -1,0 +1,98 @@
+% Parameters
+parameters beta gamma Kb;
+beta = 0.95;  % discount factor
+gamma = 1.5;  % CRRA coefficient
+Kb = -0.05;   % borrowing limit in ratio of aggregate output
+% Shock variables
+var_shock g d eta1;
+% Shocks and transition matrix
+shock_num = 8;
+g = [.9904 1.0470 .9904 1.0470 .9904 1.0470 .9904 1.0470];
+d = [.1402 .1437 .1561 .1599 .1402 .1437 .1561 .1599];
+eta1 = [.3772 .3772 .3772 .3772 .6228 .6228 .6228 .6228];
+shock_trans = [
+  0.3932 0.2245 0.0793 0.0453 0.1365 0.0779 0.0275 0.0157
+  0.3044 0.3470 0.0425 0.0484 0.1057 0.1205 0.0147 0.0168
+  0.0484 0.0425 0.3470 0.3044 0.0168 0.0147 0.1205 0.1057
+  0.0453 0.0793 0.2245 0.3932 0.0157 0.0275 0.0779 0.1365
+  0.1365 0.0779 0.0275 0.0157 0.3932 0.2245 0.0793 0.0453
+  0.1057 0.1205 0.0147 0.0168 0.3044 0.3470 0.0425 0.0484
+  0.0168 0.0147 0.1205 0.1057 0.0484 0.0425 0.3470 0.3044
+  0.0157 0.0275 0.0779 0.1365 0.0453 0.0793 0.2245 0.3932
+  ];
+shock_trans = shock_trans ./ repmat(sum(shock_trans,2),[1,shock_num]);
+% State variables
+var_state w1;  % wealth share
+w1 = linspace(-0.05,1.05,201);
+% Endogenous variables and bounds
+var_policy c1 c2 s1p nb1p nb2p ms1 ms2 mb1 mb2 ps pb w1n[8];
+inbound c1 0 1;
+inbound c2 0 1;
+inbound s1p 0.0 1.0;
+inbound nb1p 0.0 1.0;   % nb1p=b1p-Kb
+inbound nb2p 0.0 1.0;   
+inbound ms1 0 1;        % Multilier for constraints
+inbound ms2 0 1;
+inbound mb1 0 1;
+inbound mb2 0 1;
+inbound ps 0 3 adaptive(1.5);
+inbound pb 0 3 adaptive(1.5);
+inbound w1n -0.5 1.5;
+% Extra output variables
+var_aux equity_premium;
+% Interpolation objects
+var_interp ps_future pb_future c1_future c2_future;
+initial ps_future 0.0;
+initial pb_future 0.0;
+initial c1_future w1.*d+eta1;
+initial c2_future (1-w1).*d+1-eta1;
+ps_future = ps;
+pb_future = pb;
+c1_future = c1;
+c2_future = c2;
+% Variables to be used in simulation if SIMU_RESOLVE=1
+var_output c1 c2 ps pb equity_premium w1n;
+
+model;
+  % Interpolation
+  [psn',pbn',c1n',c2n'] = GDSGE_INTERP_VEC'(w1n');
+  % Expectations in Euler Equations
+  es1 = GDSGE_EXPECT{g'^(1-gamma)*(c1n'/c1)^(-gamma)*(psn'+d')/ps};
+  es2 = GDSGE_EXPECT{g'^(1-gamma)*(c2n'/c2)^(-gamma)*(psn'+d')/ps};
+  eb1 = GDSGE_EXPECT{g'^(-gamma)*(c1n'/c1)^(-gamma)/pb};
+  eb2 = GDSGE_EXPECT{g'^(-gamma)*(c2n'/c2)^(-gamma)/pb};
+  % b transformation
+  b1p = nb1p + Kb;  % Transform bond back
+  b2p = nb2p + Kb;  
+  s2p = 1-s1p;      % Market clear of shares
+  % Budget constraint
+  budget_1 = w1*(ps+d)+eta1 - c1 - ps*s1p - pb*b1p;
+  budget_2 = (1-w1)*(ps+d)+(1-eta1) - c2 - ps*s2p - pb*b2p;
+  % Consistency
+  w1_consis' = (s1p*(psn'+d') + b1p/g')/(psn'+d') - w1n';
+  % Extra output
+  equity_premium = GDSGE_EXPECT{(psn'+d')/ps*g'} - 1/pb;
+  equations;
+    -1+beta*es1+ms1;
+    -1+beta*es2+ms2;
+    -1+beta*eb1+mb1;
+    -1+beta*eb2+mb2;
+    ms1*s1p;
+    ms2*s2p;
+    mb1*nb1p;
+    mb2*nb2p;
+    b1p+b2p;
+    budget_1;
+    budget_2;
+    w1_consis';
+  end;
+end;
+
+simulate;
+  num_periods = 10000;
+  num_samples = 24;
+  initial w1 0.5;
+  initial shock 1;
+  var_simu c1 c2 ps pb equity_premium;
+  w1' = w1n';
+end;

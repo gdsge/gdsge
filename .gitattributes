@@ -1,0 +1,5 @@
+# Enforce LF for committed text so the JSON golden and MATLAB sources are
+# byte-stable across platforms regardless of a contributor's core.autocrlf.
+*.m    text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
