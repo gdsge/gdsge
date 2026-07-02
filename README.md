@@ -1,8 +1,8 @@
 # GDSGE: A Toolbox for Solving Global DSGE Models
 
-> ### 🆕 NEW — GDSGE has been refactored
+> ### 🆕 v0.2.0 — GDSGE has been refactored
 >
-> The toolbox has been rebuilt from the ground up. Highlights:
+> The toolbox has been rebuilt from the ground up and is now the main line. Highlights:
 > - **Clearer diagnostics** — actionable messages on solver errors and unsolved equations.
 > - **SymPy symbolic-differentiation backend** — analytic Jacobians, used automatically when a
 >   Python environment is present (the autodiff backend remains the default otherwise). One-time
@@ -13,8 +13,10 @@
 >
 > Overview: [refactor_summary.md](refactor_summary.md) · full status: [PROGRESS.md](PROGRESS.md).
 >
-> **Looking for the original toolbox?** The stable published version stays on the default
-> `master` branch. This is the `refactor` branch — a drop-in-compatible ground-up rewrite.
+> **Looking for the original toolbox?** It is archived on the
+> [`legacy-0.1.x`](https://github.com/gdsge/gdsge/tree/legacy-0.1.x) branch; the last
+> release of the original line is
+> [v0.1.6](https://github.com/gdsge/gdsge/releases/tag/v0.1.6).
 
 ## The GDSGE Toolbox
 
@@ -31,7 +33,7 @@ First, log into your [MATLAB Online](https://matlab.mathworks.com/)
 Then, download the refactored toolbox and unzip in the MATLAB command window:
 
 ```matlab
-websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/heads/refactor.zip')
+websave('gdsge.zip','https://github.com/gdsge/gdsge/archive/refs/heads/main.zip')
 unzip gdsge.zip
 ```
 
@@ -39,8 +41,8 @@ Finally, change directory to the unzipped folder, set up the default mex compile
 
 ```matlab
 mex -setup c++
-cd gdsge-refactor/tests
-run_tests
+cd gdsge-main/tests
+runtests
 ```
 
 See [docs/user-guide.md](docs/user-guide.md) for authoring models and reading results.
@@ -73,13 +75,13 @@ First, Configure your mex C++ compiler by running in MATLAB
 Then, acquire the source code by cloning the git repository (*the local folder name should not contain spaces*):
 
 ```git
-git clone -b refactor https://github.com/gdsge/gdsge
+git clone https://github.com/gdsge/gdsge
 ```
 
 Next, in MATLAB, change directory to gdsge/tests, run
 
 ```matlab
-run_tests
+runtests
 ```
 
 which runs all the tests and produce all results in the companion paper [Cao, Luo, and Nie (2023)](https://www.sciencedirect.com/science/article/pii/S1094202523000017).

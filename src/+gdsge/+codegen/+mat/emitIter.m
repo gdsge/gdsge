@@ -201,6 +201,7 @@ w.add('end');
 w.blank();
 
 % ---- main loop --------------------------------------------------------------
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsInit();');
 w.add('stopFlag = false;');
 w.add('GDSGE_timer = tic;');
 w.add('while(~stopFlag)');
@@ -218,6 +219,7 @@ w.add('GDSGE_CFG.splineVec = GDSGE_SPLINE_VEC;');
 w.add('GDSGE_CFG.ppCell = GDSGE_PP_CELL;');
 w.add('[GDSGE_SOL,GDSGE_F,GDSGE_AUX,GDSGE_EQVAL,GDSGE_OPT_INFO,GDSGE_DIAG] = gdsge.runtime.solveProblems(@mex_%s, GDSGE_SOL, GDSGE_LB, GDSGE_UB, GDSGE_DATA, GDSGE_F, GDSGE_AUX, GDSGE_EQVAL, GDSGE_CFG); %%#ok<ASGLU>', m);
 w.add('NeedResolved = GDSGE_DIAG.needResolved;');
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsAdd(GDSGE_RETRY_STATS, GDSGE_DIAG.minorIters);');
 w.blank();
 w.addRaw(indent4(unpk.unpack));
 w.addRaw(indent4(unpk.unpackAux));
@@ -247,7 +249,9 @@ for i = 1:numel(interpNames)
     w.add('GDSGE_PP_%s = GDSGE_PP_CELL{%d};', interpNames{i}, i);
 end
 w.blank();
-w.add('if gdsge.runtime.printIterProgress(GDSGE_Iter, GDSGE_Metric, max(GDSGE_F), nnz(NeedResolved), toc(GDSGE_timer), PrintFreq, NoPrint, stopFlag)');
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsEndIter(GDSGE_RETRY_STATS, GDSGE_Iter);');
+w.add('[GDSGE_PRINTED, GDSGE_RETRY_STATS] = gdsge.runtime.printIterProgress(GDSGE_Iter, GDSGE_Metric, max(GDSGE_F), nnz(NeedResolved), toc(GDSGE_timer), PrintFreq, NoPrint, stopFlag, GDSGE_RETRY_STATS);');
+w.add('if GDSGE_PRINTED');
 w.add('    GDSGE_timer = tic;');
 w.add('end');
 w.blank();

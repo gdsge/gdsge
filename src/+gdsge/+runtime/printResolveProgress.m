@@ -8,9 +8,10 @@ function printResolveProgress(mode, label, majorIter, minorIter, step, ...
 %                      minorIter this round; 1 for the +1 paths, the actual
 %                      trials performed for the in-MEX randomize path). Prints at
 %                      most once per window even when one step spans several.
-%   mode = 'summary' : one end-of-loop line. hitCap selects the wording:
-%                      false -> "converged after N rounds"
-%                      true  -> "stopped at MaxMinorIter=N: M still unconverged".
+%   mode = 'summary' : end-of-loop line, printed ONLY when hitCap is true
+%                      ("stopped at MaxMinorIter=N: M still unconverged");
+%                      converged solves are summarized at the PrintFreq
+%                      checkpoint instead (printIterProgress + retryStats*).
 %   label  : '' for cartesian, 'asg ' for ASG (prefixes "resolve ...").
 %   Master gate: prints nothing when verboseRetry is false.
 if ~verboseRetry
@@ -23,17 +24,15 @@ switch mode
                 majorIter, label, minorIter, nUnconverged, worstF);
         end
     case 'summary'
-        if minorIter <= 0
+        % Converged retries print nothing here: they are summarized at the
+        % PrintFreq checkpoint (printIterProgress + retryStats*). Only the
+        % MaxMinorIter-exhaustion line remains a per-solve print.
+        if ~hitCap
             return;
         end
-        if hitCap
-            fprintf(['  [iter %d] %sresolve stopped at MaxMinorIter=%d: ' ...
-                '%d points still unconverged, worst residual %g\n'], ...
-                majorIter, label, minorIter, nUnconverged, worstF);
-        else
-            fprintf('  [iter %d] %sresolve converged after %d rounds\n', ...
-                majorIter, label, minorIter);
-        end
+        fprintf(['  [iter %d] %sresolve stopped at MaxMinorIter=%d: ' ...
+            '%d points still unconverged, worst residual %g\n'], ...
+            majorIter, label, minorIter, nUnconverged, worstF);
     otherwise
         error('gdsge:runtime:printResolveProgress:badMode', ...
             'mode must be ''round'' or ''summary'', got ''%s''.', mode);

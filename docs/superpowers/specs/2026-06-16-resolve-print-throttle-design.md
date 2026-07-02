@@ -1,7 +1,10 @@
 # Design — throttled resolve-round printing + end-of-loop summary
 
 Date: 2026-06-16
-Status: Approved
+Status: Approved — partially superseded by
+`2026-07-02-checkpoint-retry-summary-design.md` (the converged
+"resolve converged after N rounds" summary line described below no longer
+prints; converged retries are now summarized at the PrintFreq checkpoint)
 
 ## Problem
 

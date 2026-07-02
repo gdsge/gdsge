@@ -6,6 +6,8 @@ __pycache__/
 .python-version
 
 # --- Generated GDSGE artifacts ---
+*.gdsge.json
+*.pdb
 mex_*.cpp
 mex_*.mexw64
 mex_*.mexa64

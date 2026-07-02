@@ -90,6 +90,7 @@ w.add('GDSGE_ASG_INTERP_SPARE = asg(%s,%d,shock_num);', stateGridCell, numel(int
 w.add('GDSGE_SOL_ASG_INTERP_NEW = asg(%s,%d,shock_num);', stateGridCell, numPolicyTotal);
 w.add('GDSGE_SOL_ASG_INTERP_SPARE = asg(%s,%d,shock_num);', stateGridCell, numPolicyTotal);
 w.blank();
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsInit();');
 w.add('stopFlag = false;');
 w.add('GDSGE_timer = tic;');
 w.add('while(~stopFlag)');
@@ -116,6 +117,7 @@ w.blank();
 % depth 8 = 2 codeWriter levels (outer iter while + refinement while), 4 sp/level
 addProposeAndSolve(w, main, pack, m, ...
     'GDSGE_SOL_ASG_INTERP_NEW', 'GDSGE_SOL_ASG_INTERP', 8);
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsAdd(GDSGE_RETRY_STATS, GDSGE_DIAG.minorIters);');
 w.blank();
 for i = 1:numel(ir.interp)
     w.add('%s = %s;', ir.interp{i}.name, ir.interp{i}.updateExpr);
@@ -142,7 +144,9 @@ w.add('GDSGE_TMP_PP = GDSGE_SOL_ASG_INTERP_NEW; GDSGE_SOL_ASG_INTERP_NEW = GDSGE
 w.blank();
 w.add('stopFlag = GDSGE_Metric<TolEq || GDSGE_Iter>=MaxIter;');
 w.blank();
-w.add('if gdsge.runtime.printIterProgress(GDSGE_Iter, GDSGE_Metric, max(GDSGE_F), nnz(~GDSGE_solved), toc(GDSGE_timer), PrintFreq, NoPrint, stopFlag)');
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsEndIter(GDSGE_RETRY_STATS, GDSGE_Iter);');
+w.add('[GDSGE_PRINTED, GDSGE_RETRY_STATS] = gdsge.runtime.printIterProgress(GDSGE_Iter, GDSGE_Metric, max(GDSGE_F), nnz(~GDSGE_solved), toc(GDSGE_timer), PrintFreq, NoPrint, stopFlag, GDSGE_RETRY_STATS);');
+w.add('if GDSGE_PRINTED');
 w.add('    GDSGE_timer = tic;');
 w.add('end');
 w.blank();

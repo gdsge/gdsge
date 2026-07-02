@@ -5,11 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Refactor
+## [0.2.0] - 2026-07-02
 
 Ground-up refactor of the toolbox. Drop-in backward compatible: every existing `.gmod`
 runs unchanged, the public API is preserved, and `IterRslt` / `SimuRslt` shapes are frozen.
 See [refactor_summary.md](refactor_summary.md) and [PROGRESS.md](PROGRESS.md) for detail.
+The original toolbox is archived on the
+[`legacy-0.1.x`](https://github.com/gdsge/gdsge/tree/legacy-0.1.x) branch.
 
 ### Added
 
