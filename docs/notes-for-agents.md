@@ -35,6 +35,13 @@ relative to the repo root. `base_package/` is git-ignored but present in the wor
   refactor drops it (copies + silent overwrite) in favor of explicit named locals and direct
   struct dot-assignment.
 
+Model expressions support relational operators on the adept path (`emitExpr` two-tier
+precedence: `==,~=` below `<,>,<=,>=` below arithmetic, matching C++; `~=` → `!=`).
+Logical operators (`&`, `|`, `&&`, `||`) parse into binop nodes but the emitter rejects
+them (`unsupported binop`). The SymPy backend does not support relationals — auto mode
+guards on this (resolveBackend), but an explicit sympy pin fails mid-codegen with a raw
+Python error (known, deferred).
+
 ## Reference for the analytic-Jacobian backend (`base_package/hans/`)
 
 - `hans_parser.py` — SymPy-based: defines custom `Function`s with `fdiff`, computes
@@ -52,6 +59,19 @@ relative to the repo root. `base_package/` is git-ignored but present in the wor
 Lines like `k = exp(linspace(log(kMin+1e-3),log(kMax+1e-3),kPts)) - 1e-3;` and
 `shock_trans = shock_trans ./ repmat(sum(shock_trans,2),[1,shock_num]);` are real MATLAB,
 `eval`'d during parsing to obtain grids/params. This is why the parser must run in MATLAB.
+
+The declaration region accepts *arbitrary* MATLAB, not just `name = value`
+assignments: multi-output calls (`[a,b] = ndgrid(...)`), bare calls (`rng(0)`),
+struct-field LHS, and `for`/`if` blocks all pass through verbatim
+(`parseVarDecls` Pass B), and declaration kinds may re-open
+(`parameters ... var_shock ... parameters ...`, Pass C — `ir.setup` kinds can
+repeat). Passthrough code runs twice: once in the parse-time eval and again in
+the generated iter/simulate files after the default flags. Two guardrails
+replace the old toolbox's blind copying: a command-form statement whose first
+word is edit-distance ≤ 2 from a declaration keyword raises
+`gdsge:parser:probableTypo`, and broken MATLAB still fails as
+`gdsge:parser:setupEvalFailed` with numbered lines. Limitation: state grids and
+interp updates are only captured from single `name = rhs` assignments.
 
 ## Test models (`base_package/gdsge/tests/`)
 

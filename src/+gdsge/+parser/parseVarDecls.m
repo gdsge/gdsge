@@ -2,7 +2,8 @@ function decls = parseVarDecls(declText)
 % PARSEVARDECLS  Pure structural parse of the declaration region. No eval.
 %   Returns a struct of name sets, sized policy/aux items, bounds, interp
 %   initial/update expressions, state grid text, and the residual setup
-%   statements (param/shock/grid value assignments) to be eval'd later.
+%   statements (param/shock/grid value assignments plus verbatim MATLAB
+%   passthrough) to be eval'd later.
 stmts = gdsge.parser.splitStatements(declText);
 
 decls = struct('paramNames',{{}}, 'shockNames',{{}}, 'stateNames',{{}}, ...
@@ -55,12 +56,23 @@ for i = 1:numel(stmts)
     end
 end
 
-% ---- Pass B: classify assignment statements ------------------------------
+% ---- Pass B: classify residual statements ---------------------------------
+% Statements that are not keyword declarations. A single `name = rhs`
+% assignment is routed by its LHS (interp update / tensor assign / setup +
+% state grid). Any other statement form — multi-output [a,b] = f(...), bare
+% function calls, struct-field LHS, control-flow fragments — is MATLAB
+% passthrough: it joins setupStmts verbatim, runs in the parse-time eval, and
+% is replayed in the generated files (old-toolbox behavior). One hard error:
+% a command-form statement whose first word is a near-miss of a declaration
+% keyword is almost certainly a typo'd declaration; fail early with a
+% suggestion instead of obscurely at eval.
 for j = 1:numel(assignIdx)
     st = stmts{assignIdx(j)};
     lhs = assignLHS(st);
     if isempty(lhs)
-        error('gdsge:parser:unknownDeclaration', 'Unrecognized declaration: "%s"', firstLine(st));
+        checkKeywordTypo(st, DECL_KINDS);
+        decls.setupStmts{end+1} = st; %#ok<AGROW>
+        continue;
     end
     rhs = strtrim(assignRHS(st));
     if ismember(lhs, decls.interpNames)
@@ -90,7 +102,6 @@ sections = {};
 curKind = 'global';
 curBody = {};
 headerOpen = false;
-seenKinds = {};
 for i = 1:numel(stmts)
     st = stmts{i};
     kw = regexp(st, '^([A-Za-z_]\w*)', 'tokens', 'once');
@@ -99,18 +110,14 @@ for i = 1:numel(stmts)
         if headerOpen && strcmp(key, curKind)
             continue;   % contiguous same-kind declaration line — extend header
         end
-        if ismember(key, seenKinds)
-            error('gdsge:parser:reopenedDeclBlock', ...
-                ['Declaration kind "%s" is re-opened after other statements. ' ...
-                 'Make all "%s" declarations contiguous (move them together, ' ...
-                 'with no other statements between them).'], key, key);
-        end
-        % flush the current section (skip an empty leading 'global' preamble)
+        % flush the current section (skip an empty leading 'global' preamble).
+        % A kind may re-open later (old-toolbox layouts interleave declaration
+        % blocks); sections are positional and kinds may repeat in ir.setup.
         if ~(strcmp(curKind, 'global') && isempty(curBody))
             sections{end+1} = struct('kind', curKind, 'body', joinBody(curBody)); %#ok<AGROW>
         end
         curBody = {};
-        curKind = key; seenKinds{end+1} = key; headerOpen = true; %#ok<AGROW>
+        curKind = key; headerOpen = true;
     else
         headerOpen = false;
         expected = expectedSection(st, key, decls);
@@ -119,7 +126,6 @@ for i = 1:numel(stmts)
         end
         if ~isempty(expected) && ~strcmp(expected, curKind)
             lhs = assignLHS(st);
-            if isempty(lhs) && strcmp(key, 'initial'); lhs = 'initial'; end
             warning('gdsge:parser:setupBlockMismatch', ...
                 ['"%s" is defined in the "%s" block but is associated with "%s". ' ...
                  'Move this statement so it appears after the "%s" declaration ' ...
@@ -210,16 +216,58 @@ end
 
 function kind = expectedSection(st, key, decls)
 % The section a setup/associate statement *belongs* to, by its LHS. '' = no
-% expectation (options, helper intermediates, declaration lines, inbound).
+% expectation (options, helper intermediates, declaration lines, inbound,
+% interp initial/updates).
 kind = '';
-if strcmp(key, 'initial'); kind = 'var_interp'; return; end
-if ismember(key, {'inbound','inbound_init'}); return; end   % placement not warned
+% 'initial' and interp-name assignments are extracted by keyword/LHS name
+% regardless of position (never enter a section body), and the canonical
+% layout forces them after model_init -> positionally in var_aux_init.
+if ismember(key, {'initial','inbound','inbound_init'}); return; end
 lhs = assignLHS(st);
 if isempty(lhs); return; end
 if any(strcmp(lhs, {'shock_trans','shock_num'}));  kind = 'var_shock'; return; end
 if ismember(lhs, decls.shockNames);  kind = 'var_shock';  return; end
 if ismember(lhs, decls.stateNames);  kind = 'var_state';  return; end
-if ismember(lhs, decls.interpNames); kind = 'var_interp'; return; end
+if ismember(lhs, decls.interpNames); return; end
 if ismember(lhs, decls.tensorNames); kind = 'var_tensor'; return; end
 if ismember(lhs, decls.paramNames);  kind = 'parameters'; return; end
+end
+
+function checkKeywordTypo(st, DECL_KINDS)
+% Guard against typo'd declaration keywords. Fires only on command-form
+% statements — "<word> <word> ..." with no '=' on the first line, the shape a
+% declaration takes — whose first word is within edit distance 2 of a keyword.
+% Function-call syntax ("rouwen(...)"), assignments, control-flow headers
+% (contain '='), and single-word statements ("end") never match.
+l = firstLine(st);
+if any(l == '='); return; end
+m = regexp(l, '^\s*([A-Za-z_]\w*)\s+[A-Za-z_]', 'tokens', 'once');
+if isempty(m); return; end
+word = m{1};
+KEYWORDS = [DECL_KINDS, {'inbound', 'inbound_init', 'initial'}];
+for k = 1:numel(KEYWORDS)
+    if levenshtein(word, KEYWORDS{k}) <= 2
+        error('gdsge:parser:probableTypo', ...
+            ['Unknown keyword "%s" in "%s" — did you mean "%s"? (To pass a ' ...
+             'command-form MATLAB statement through to the generated code, ' ...
+             'use function syntax: %s(...).)'], ...
+            word, strtrim(l), KEYWORDS{k}, word);
+    end
+end
+end
+
+function d = levenshtein(a, b)
+% Plain Levenshtein distance. The caller only tests <= 2, so bail out early
+% when the length gap alone exceeds that.
+la = numel(a); lb = numel(b);
+if abs(la - lb) > 2; d = 3; return; end
+D = zeros(la + 1, lb + 1);
+D(:, 1) = (0:la)';
+D(1, :) = 0:lb;
+for i = 1:la
+    for j = 1:lb
+        D(i+1, j+1) = min([D(i, j+1) + 1, D(i+1, j) + 1, D(i, j) + (a(i) ~= b(j))]);
+    end
+end
+d = D(la + 1, lb + 1);
 end

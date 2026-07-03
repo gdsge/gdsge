@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-07-03
+
+Driven by a large CCP (discrete-choice) model: 13 states, adaptive sparse grids, and
+~2,500 statements of nested-`max` logsumexp algebra — the largest model the toolbox
+has compiled to date, and the first to run multithreaded on Windows.
+
+### Added
+
+- The gmod declaration region accepts arbitrary MATLAB again, as the pre-refactor
+  toolbox did: multi-output assignments (`[a,b] = ndgrid(...)`), bare function
+  calls, struct-field assignments, `for`/`if` blocks, and declaration blocks that
+  re-open (`parameters ... var_shock ... parameters ...`). A new guard catches
+  misspelled declaration keywords (`paramters`) at parse time with a suggestion
+  instead of a confusing downstream error.
+- Relational operators (`<`, `>`, `<=`, `>=`, `==`, `~=`) in model expressions compile on
+  the C++ (adept) path with C++-correct precedence and parenthesization (`~=` emits as
+  `!=`). Auto backend selection treats comparisons like `max`/`min`/`abs` — non-smooth,
+  so SymPy is never auto-picked for models that use them.
+- MATLAB row-vector literals in model expressions: `[a b c]` (space- or comma-separated)
+  broadcasts elementwise through operators and functions and collapses to a scalar under
+  `sum` / `prod` / `max` / `min`, matching the pre-refactor symbolic expansion.
+- Common-subexpression hoisting in the parser: repeated subexpressions are computed once
+  into generated locals, shrinking generated code, compile time, autodiff tape work
+  (~10x faster iteration on CCP-style models), and stack usage. Values are unchanged.
+
+### Fixed
+
+- Auto backend selection now picks adept autodiff for models that call `max`/`min`/`abs`:
+  SymPy analytic Jacobians of non-smooth models blow up symbolically.
+- Windows: very large models compile (`/bigobj`) and run multithreaded — generated stack
+  frames now fit the 1 MB OpenMP worker stacks, and the OpenMP runtime is pinned so
+  `clear mex` after a parallel solve no longer crashes MATLAB.
+- `0*x` terms fold to zero as the old symbolic pipeline did, so models that reference
+  undeclared names inside zero-multiplied terms keep running.
+- The parser no longer warns about `initial`/`var_interp` assignments placed after the
+  `model_init` block — the canonical layout when initial interp values come from
+  `model_init` results.
+- The SymPy backend copes with a Python interpreter that other code (e.g. `startup.m`,
+  another toolbox) loaded into MATLAB first: an out-of-process interpreter without SymPy
+  is replaced with the GDSGE environment automatically; an in-process one cannot be
+  replaced, so the toolbox now says exactly that (restart MATLAB) instead of
+  "Python not detected", and `gdsge_setup_sympy` validates the session at setup time.
+
 ## [0.2.0] - 2026-07-02
 
 Ground-up refactor of the toolbox. Drop-in backward compatible: every existing `.gmod`

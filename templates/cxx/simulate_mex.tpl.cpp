@@ -9,6 +9,7 @@
 #include "mex.h"
 #include "interp_eval_double.h"
 #include <omp.h>
+#include "pin_omp_runtime.h"
 #define MAXDIM 10
 
 using gdsge_eval::PpEval;

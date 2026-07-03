@@ -6,10 +6,19 @@ function ensurePath()
 %       `addpath src` is enough for callers — this hook adds the rest.
 %   (2) On Windows, append that directory to the system PATH so the MEX
 %       kernels can load essential_blas.dll.
+%   (3) Seed OMP_STACKSIZE (unless the user set it): OpenMP workers inherit
+%       matlab.exe's 1 MB stack reserve on Windows, which huge generated
+%       model bodies overflow. The LLVM runtime (MSVC -openmp:llvm) and GNU
+%       libgomp read it at first parallel region; this hook runs ahead of
+%       every solver-MEX call.
 %   Idempotent. Called first by gdsge_codegen and by every generated
 %   iter_<model>/simulate_<model>, ahead of any kernel call.
 kernelsDir = fullfile( ...
     fileparts(fileparts(fileparts(mfilename('fullpath')))), 'kernels');
+
+if isempty(getenv('OMP_STACKSIZE'))
+    setenv('OMP_STACKSIZE', '64M');
+end
 
 if ~any(strcmp(strsplit(path, pathsep), kernelsDir))
     addpath(kernelsDir);

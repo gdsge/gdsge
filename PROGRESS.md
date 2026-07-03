@@ -224,6 +224,19 @@ Each phase gets its own spec→plan→implement cycle (see `docs/superpowers/pla
 
 ## Changelog
 
+- 2026-07-03: **Preamble MATLAB passthrough + relational operators.** The declaration
+  region accepts arbitrary MATLAB again, as the old toolbox did: multi-output assignments
+  (`[a,b] = ndgrid(...)`), bare calls, struct-field LHS, control flow, and re-opened
+  declaration blocks (`ir.setup` kinds may repeat). Blind copying is replaced by guardrails:
+  `gdsge:parser:probableTypo` (command-form near-miss of a declaration keyword, edit
+  distance ≤ 2) and the existing numbered-line `setupEvalFailed` eval backstop. Driven by a
+  real exchange-rate model (incomp), which also surfaced that model expressions with
+  relational operators (`(x>0)*1.0`) didn't compile — `emitExpr` now emits all six with
+  two-tier C++-correct precedence (`~=` → `!=`), and `resolveBackend` treats comparisons as
+  non-smooth (never auto-picks SymPy). End-to-end gate: incomp warm-started from the old
+  toolbox's converged result reaches Metric 9.1e-06 (< TolEq) with 0 unconverged points in
+  one iteration. Suite 600/0/0; existing goldens byte-identical. Spec:
+  `docs/superpowers/specs/2026-07-03-preamble-matlab-passthrough-design.md`.
 - 2026-06-16: **Backend auto-selection + informative compile output.** The C++ Jacobian
   backend is now chosen at codegen time by `gdsge.codegen.resolveBackend` with precedence
   in-gmod `UseAutoDiff` > `GDSGE_BACKEND` env (`adept|sympy|auto`) > auto-detect (Python

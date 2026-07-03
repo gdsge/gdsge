@@ -39,9 +39,10 @@ if useSympy
         error('gdsge:codegen:cxxUnderSympy', ...
             'sympy backend cannot differentiate cxx blocks');
     end
-    if ~gdsge.codegen.sympy.ensurePyenv()
+    [pyOk, pyWhy] = gdsge.codegen.sympy.ensurePyenv();
+    if ~pyOk
         error('gdsge:codegen:sympyPythonUnavailable', ...
-            ['sympy backend requires the uv Python env. Run: uv sync --project pyext']);
+            'sympy backend requires the GDSGE Python environment: %s', pyWhy);
     end
     taskFn = @gdsge.codegen.cxx.sympymodel.emitTask;
 else

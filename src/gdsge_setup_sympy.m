@@ -67,8 +67,18 @@ venvPy = gdsge.codegen.sympy.venvPython(pyextDir);
 if isempty(venvPy)
     error('gdsge:setup:noVenv', 'uv sync ran but no interpreter was found.');
 end
-fprintf(['[gdsge] SymPy backend ready. It is auto-selected when you run a model;\n' ...
-         '        force it per-model with UseAutoDiff=0; (UseAutoDiff=1; forces adept).\n']);
+
+% 4) Confirm THIS session can use it. pyenv may already be loaded with a
+% foreign interpreter by other code (startup.m, another toolbox); ensurePyenv
+% recovers when it can (OutOfProcess) and explains when it cannot (InProcess).
+[ok, why] = gdsge.codegen.sympy.ensurePyenv();
+if ok
+    fprintf(['[gdsge] SymPy backend ready. It is auto-selected when you run a model;\n' ...
+             '        force it per-model with UseAutoDiff=0; (UseAutoDiff=1; forces adept).\n']);
+else
+    fprintf(['[gdsge] The SymPy environment was created, but this MATLAB session cannot use it:\n' ...
+             '        %s\n'], why);
+end
 end
 
 % ---------------------------------------------------------------------------

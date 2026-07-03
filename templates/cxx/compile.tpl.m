@@ -31,10 +31,15 @@ if ispc
     mexCommand = 'mex';
     switch compiler_name
         case 'MinGW64'
-            flag2 = ' CXXOPTIMFLAGS="-O -DNDEBUG" CFLAGS="$CFLAGS -w -fopenmp -fpermissive -DADEPT_THREAD_LOCAL=__thread"';
+            % -Wa,-mbig-obj: large models overflow the COFF section limit
+            flag2 = ' CXXOPTIMFLAGS="-O -DNDEBUG" CFLAGS="$CFLAGS -w -fopenmp -fpermissive -Wa,-mbig-obj -DADEPT_THREAD_LOCAL=__thread"';
             flag3 = ' LDFLAGS="$LDFLAGS -w -fopenmp"';
         case 'MSVC'
-            flag2 = ' OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /Z7"';
+            % /bigobj: large models overflow the COFF section limit (C1128).
+            % NOTE: stay on vcomp (/openmp). -openmp:llvm links libomp140,
+            % which refuses to initialize inside MATLAB (OMP Error #15:
+            % libiomp5md, MATLAB's MKL OpenMP, is already resident).
+            flag2 = ' OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /diagnostics:caret /openmp /bigobj /Z7"';
             flag3 = ' LINKOPTIMFLAGS="/DEBUG:FULL"';
         otherwise
             flag2 = ' OPTIMFLAGS="/O2 /DNDEBUG" COMPFLAGS="$COMPFLAGS /wd4267 /wd4068 /wd4091 /Qansi-alias /openmp"';

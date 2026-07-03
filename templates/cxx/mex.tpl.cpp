@@ -34,6 +34,7 @@ using std::vector;
 #ifndef NO_OMP
 #include "omp.h"
 #endif
+#include "pin_omp_runtime.h"
 
 #include "wl_math.h"
 #ifdef USE_ASG

@@ -44,6 +44,7 @@ for i = 1:numel(bodyStmts)
     [stmtList, counter] = parseStatement(toks, counter);
     statements = [statements, stmtList]; %#ok<AGROW>
 end
+statements = gdsge.parser.hoistCommonSubtrees(statements);
 
 % --- 3. equations (line-aware: if/elseif/else/end group into conditionals) ---
 equations = parseEquationRegion(eqText, eqOpen);

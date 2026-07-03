@@ -83,7 +83,6 @@ After sectioning, each body statement gets an **expected** section computed from
 | a declared parameter name                    | `parameters`     |
 | a declared shock var name, `shock_num`, `shock_trans` | `var_shock` |
 | a declared state name (grid assignment)      | `var_state`      |
-| a declared `var_interp` name, or `initial X` | `var_interp`     |
 | a declared `var_tensor` name                 | `var_tensor`     |
 | unknown LHS (options, helper intermediates)  | *(none)*         |
 
@@ -93,6 +92,11 @@ After sectioning, each body statement gets an **expected** section computed from
   no expectation and never warn.
 - `inbound` / `inbound_init` **placement is not warned** — low signal; they are already
   structurally bound to policy/aux bounds regardless of section.
+- Interp `initial X` statements and declared-interp-name assignments are likewise **not
+  warned** (amended 2026-07-03, see
+  `2026-07-03-interp-initial-placement-warning-design.md`): they are extracted by
+  keyword/LHS name regardless of position, and the canonical layout forces them after
+  `model_init`, which positionally lands them in the `var_aux_init` section.
 
 If a statement's actual section ≠ its expected section → emit
 `gdsge:parser:setupBlockMismatch`. **The warning must be actionable**: it names the

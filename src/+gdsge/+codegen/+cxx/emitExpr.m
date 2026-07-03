@@ -42,13 +42,16 @@ s = emit(node, 0);
                     s = ['pow(' emit(n.lhs, 0) ',' emit(n.rhs, 0) ')'];
                 else
                     p = binopPrec(n.op);
-                    % Right child of left-associative - and / needs higher
-                    % threshold to force parens on equal-precedence rhs
+                    % Right child of a left-associative non-commutative op
+                    % (-, /, and every relational: MATLAB a>(b<c) must not
+                    % re-parse as (a>b)<c) needs a higher threshold to force
+                    % parens on an equal-precedence rhs
                     rp = p;
-                    if any(strcmp(n.op, {'-', '/'}))
+                    if any(strcmp(n.op, ...
+                            {'-', '/', '==', '~=', '<', '>', '<=', '>='}))
                         rp = p + 1;
                     end
-                    s = [emit(n.lhs, p) n.op emit(n.rhs, rp)];
+                    s = [emit(n.lhs, p) cxxOp(n.op) emit(n.rhs, rp)];
                     if p < parentPrec
                         s = ['(' s ')'];
                     end
@@ -100,10 +103,29 @@ end
 % ---------------------------------------------------------------------------
 function p = binopPrec(op)
 switch op
-    case {'+', '-'}, p = 1;
-    case {'*', '/'}, p = 2;
+    % Relational ops bind below +/-: under any arithmetic parent this forces
+    % parens (e.g. "(a>b)*1.0"); at the top level (parentPrec 0) they stay
+    % bare. Two tiers matching C++, where == / != bind LOOSER than < > <= >=
+    % (MATLAB has one flat left-assoc tier, so a==b>c means (a==b)>c and the
+    % == child under a relational parent needs parens). parseExpr.m also
+    % produces binop nodes for the four logical ops (`&`, `|`, `&&`, `||`),
+    % which this emitter rejects below via the `otherwise` badNode error.
+    case {'==', '~='}, p = 1;
+    case {'<', '>', '<=', '>='}, p = 2;
+    case {'+', '-'}, p = 3;
+    case {'*', '/'}, p = 4;
     otherwise
         error('gdsge:codegen:badNode', 'unsupported binop: %s', op);
+end
+end
+
+% ---------------------------------------------------------------------------
+function s = cxxOp(op)
+% MATLAB '~=' has no C++ spelling; every other supported op is identical.
+if strcmp(op, '~=')
+    s = '!=';
+else
+    s = op;
 end
 end
 
