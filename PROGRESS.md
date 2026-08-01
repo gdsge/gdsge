@@ -224,6 +224,41 @@ Each phase gets its own spec→plan→implement cycle (see `docs/superpowers/pla
 
 ## Changelog
 
+- 2026-07-31: **In-MEX randomized restarts for the simulate path.** `UseMexRandomize` was
+  wired only for cartesian iter; simulate fell back to the MATLAB loop, one MEX call per
+  restart. The C++ already supported what simulate needs — `GDSGE_neighbor_fixpoint` returns
+  at `GDSGE_NUM_DIMS <= 0`, so an empty `GDSGE_PROBLEM_STRIDES` gives randomize-only — so
+  **no C++ change**: `solveProblems` stopped gating `useMexRandomize` on `useMexResolve` (the
+  `adaptInSol` guard stays, since that hook rewrites bounds between retries in MATLAB), and
+  `emitSimulate` emits the randomize cfg with `randomizeSalt = GDSGE_t` so each period draws
+  an independent stream. No neighbor sweep in simulate: problems are samples, not grid
+  points. **Measured on TechBubbles**: 1.8× at 6 samples (22.1s → 12.3s), but only **1.12× at
+  100 samples** (62.6s → 55.8s) — the MATLAB loop already amortizes call overhead across 100
+  problems, so batching mainly helps when per-call work is small. The earlier "should cut the
+  ~7h run substantially" estimate was too optimistic. **No multi-root drift**: agreement with
+  the old-toolbox golden is ≤1.2e-09 on every field, and the whole corpus stays green, so the
+  default is on. The TechBubbles gate now also runs a short `UseMexRandomize=0` leg, since
+  that escape hatch would otherwise be untested (40s, was 32s). Suite **622/622**. Branch
+  `feat/simulate-inmex-randomize`.
+- 2026-07-31: **Uncapped resolve retries + simulate diagnostics + install self-check.**
+  `TechBubblesV4nblogKRAv3` ran on the old toolbox but its simulate produced garbage on the
+  new one: `emitSetup` emitted `MaxMinorIter = 200` where the old toolbox uses `inf`, and the
+  model needs up to ~5300 randomized restarts per period. The cap did not fail loudly — the
+  simulate path wrote the unconverged solution into `SimuRslt` and fed it forward, so `q`
+  reached 987 against a true maximum of 2.5. Restoring `inf` reproduces the old toolbox to
+  ≤9.1e-10 on every field with the shock path bit-exact, at parity cost (44.7s old vs 52.5s
+  new for 20 periods × 100 samples). Three defects the cap had been masking are also fixed:
+  `reportUnconverged` threw `MATLAB:badsubscript` on the simulate path for any multi-state
+  model (new `reportUnconvergedSamples`); the diagnostics heartbeat used `mod(minorIter,
+  diagnoseAt)`, which is unbounded uncapped and skippable by the in-MEX batch step (now
+  geometric backoff); and simulate now aggregates retry stats at the `SimuPrintFreq`
+  checkpoint instead of a per-period block. Separately, `checkInstall` (run once per session
+  from `ensurePath`) turns a truncated source file — reported from a macOS install as
+  `MATLAB:scriptNotAFunction` naming an internal file — into one actionable error. New
+  corpus gate `tests/TechBubblesV4nblogKRAv3` is the only >200-retry model in the suite
+  (~32s: compile + Iter=355 + a retry-heavy 6×100 simulate). No IR schema change. Full suite
+  **621/621** green. Branch `fix/techbubbles-retry-cap`. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-07-31-techbubbles-retry-cap*`.
 - 2026-07-03: **Preamble MATLAB passthrough + relational operators.** The declaration
   region accepts arbitrary MATLAB again, as the old toolbox did: multi-output assignments
   (`[a,b] = ndgrid(...)`), bare calls, struct-field LHS, control flow, and re-opened

@@ -20,8 +20,22 @@ w.add('NoSave = 0;');
 w.add('SimuPrintFreq = %s;', mat2str(getOpt(opt, 'simuPrintFreq', 1000), 17));
 w.add('SimuSaveFreq = %s;', mat2str(getOpt(opt, 'simuSaveFreq', inf), 17));
 w.add('MaxIter = inf;');
-w.add('MaxMinorIter = 200;');        % bounded retries; was inf (could loop forever)
-w.add('DiagnoseMinorIter = 10;');    % print a diagnostic heartbeat every N retries while stuck
+% Old-toolbox parity. A finite cap does not fail loudly: the simulate path
+% writes the unconverged solution into SimuRslt and feeds it forward as the
+% next period's state, so results are silently truncated. TechBubblesV4nblogKRAv3
+% legitimately needs ~5300 randomized restarts per period. Users who want a
+% runaway guard set MaxMinorIter themselves, which also arms
+% errorOnNonconvergence on the iter path.
+w.add('MaxMinorIter = inf;');
+if strcmp(target, 'simulate')
+    % Retrying in bulk is normal here, so a per-solve heartbeat would fire
+    % every period. printSimuRetryStats aggregates at the SimuPrintFreq
+    % checkpoint instead. The field is still emitted, so the FINAL
+    % cap-exhaustion diagnostics block still prints.
+    w.add('DiagnoseMinorIter = 0;');
+else
+    w.add('DiagnoseMinorIter = 10;');   % heartbeat every N retries while stuck
+end
 if strcmp(target, 'simulate')
     w.add('num_samples = %s;', mat2str(ir.simulate.numSamples, 17));
     w.add('num_periods = %s;', mat2str(ir.simulate.numPeriods, 17));

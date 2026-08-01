@@ -94,6 +94,7 @@ w.add('    SimuRslt.shock(:,GEN_SHOCK_START_PERIOD));');
 w.blank();
 w.add('%s', pack.simuData0);
 w.add('GDSGE_SHOCK_VAR_INDEX_BASE = ([0:num_samples-1]'')*shock_num;');
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsInit();');
 w.add('GDSGE_timer = tic;');
 w.add('for GDSGE_t=1:num_periods');
 w.in();
@@ -143,6 +144,18 @@ w.add('GDSGE_CFG.ppCell = %s;', ppValuesLit);
 w.add('GDSGE_CFG.maxMinorIter = MaxMinorIter;');
 w.add('GDSGE_CFG.probSize = [1 GDSGE_NPROB];');
 w.add('GDSGE_CFG.useNearestNeighbor = false;');
+% In-MEX randomized restarts, without the neighbor sweep: useMexResolve stays
+% false, so strides are empty and the C++ fixpoint no-ops. Problems here are
+% samples, not grid points - there is no adjacent problem to warm-start from.
+% The salt is the period, so each period draws an independent restart stream
+% instead of replaying identical draws every period.
+w.add('GDSGE_CFG.useMexResolve = false;');
+w.add('GDSGE_CFG.useMexRandomize = UseMexRandomize;');
+w.add('GDSGE_CFG.randomizeBatch = MexRandomizeBatch;');
+w.add('GDSGE_CFG.randomSeed = MexRandomSeed;');
+w.add('GDSGE_CFG.randomizeSalt = GDSGE_t;');
+w.add('GDSGE_CFG.majorIter = GDSGE_t;');
+w.add('GDSGE_CFG.resolvePrintFreq = ResolvePrintFreq;');
 w.add('GDSGE_CFG.verboseRetry = false;');
 w.add('GDSGE_CFG.solNames = %s;', solNamesLit);
 w.add('GDSGE_CFG.diagnoseAt = DiagnoseMinorIter;');
@@ -153,10 +166,14 @@ w.add('else');
 w.add('    GDSGE_CFG.adaptInSol = [];');
 w.add('end');
 w.add('[GDSGE_SOL,GDSGE_F,GDSGE_AUX,GDSGE_EQVAL,GDSGE_OPT_INFO,GDSGE_DIAG] = gdsge.runtime.solveProblems(@mex_%s, GDSGE_SOL, GDSGE_LB, GDSGE_UB, GDSGE_DATA, GDSGE_F, GDSGE_AUX, GDSGE_EQVAL, GDSGE_CFG); %%#ok<ASGLU>', m);
+% Sample-shaped report: problems are samples here, so coordinates come from the
+% per-sample `shock`/state vectors assigned at the top of the period loop, not
+% from ind2sub over a grid (which threw MATLAB:badsubscript for >1 state).
 w.add('if any(GDSGE_DIAG.needResolved)');
-w.add('    warning(''gdsge:runtime:unconverged'', ''period %%d: %%s'', GDSGE_t, gdsge.runtime.reportUnconverged(GDSGE_DIAG.needResolved, GDSGE_F, [1 GDSGE_NPROB], %s, {%s}, 5));', ...
+w.add('    warning(''gdsge:runtime:unconverged'', ''period %%d: %%s'', GDSGE_t, gdsge.runtime.reportUnconvergedSamples(GDSGE_DIAG.needResolved, GDSGE_F, shock, %s, {%s}, 5));', ...
     stateNameCell, stateList);
 w.add('end');
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsAdd(GDSGE_RETRY_STATS, GDSGE_DIAG.minorIters);');
 w.blank();
 w.addRaw(indent4(unpk.unpack));
 w.addRaw(indent4(unpk.unpackAux));
@@ -164,6 +181,7 @@ w.blank();
 w.add('GDSGE_SHOCK_VAR_LINEAR_INDEX = SimuRslt.shock(:,GDSGE_t+1) + GDSGE_SHOCK_VAR_INDEX_BASE;');
 w.addRaw(indent4(simu.assign));
 w.blank();
+w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsEndIter(GDSGE_RETRY_STATS, GDSGE_t);');
 w.add('if mod(GDSGE_t,SimuPrintFreq)==0');
 w.add('    fprintf(''Periods: %%d\\n'', GDSGE_t);');
 w.add('    SimuRsltNames = fieldnames(SimuRslt);');
@@ -176,6 +194,7 @@ w.add('        fprintf(''%%8.4g'', SimuRslt.(SimuRsltNames{GDSGE_field})(1,GDSGE
 w.add('    end');
 w.add('    fprintf(''\\n'');');
 w.add('    fprintf(''elapsed:%%.1fs\\n'', toc(GDSGE_timer));');
+w.add('    GDSGE_RETRY_STATS = gdsge.runtime.printSimuRetryStats(GDSGE_RETRY_STATS);');
 w.add('    GDSGE_timer = tic;');
 w.add('end');
 w.add('if mod(GDSGE_t,SimuSaveFreq)==0');

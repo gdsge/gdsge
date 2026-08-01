@@ -13,6 +13,8 @@ function ensurePath()
 %       every solver-MEX call.
 %   Idempotent. Called first by gdsge_codegen and by every generated
 %   iter_<model>/simulate_<model>, ahead of any kernel call.
+gdsge.runtime.checkInstall();   % once per session; clear error on a damaged tree
+
 kernelsDir = fullfile( ...
     fileparts(fileparts(fileparts(mfilename('fullpath')))), 'kernels');
 

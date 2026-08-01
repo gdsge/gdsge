@@ -32,8 +32,15 @@ MEX_TASK_INF_HORIZON = 1;                     %#ok<NASGU>
 GDSGE_SPLINE_VEC = cfg.splineVec;             %#ok<NASGU>
 GDSGE_PROBLEM_STRIDES = [];                   %#ok<NASGU>  % MEX in-resolve gate (set per sweep call)
 useMexResolve = isfield(cfg,'useMexResolve') && cfg.useMexResolve;
+% Strides drive the in-MEX neighbor sweep. Empty means "no sweep": the C++
+% GDSGE_neighbor_fixpoint returns immediately at GDSGE_NUM_DIMS <= 0. The
+% simulate path relies on that - its problems are samples, not grid points, so
+% there is no adjacent problem to warm-start from - while still batching the
+% random restarts inside the MEX.
 if useMexResolve
     GDSGE_RESOLVE_STRIDES = cumprod([1, cfg.probSize(1:end-1)]);  % prod(probSize(1:d-1)), d=1..D
+else
+    GDSGE_RESOLVE_STRIDES = [];
 end
 if isfield(cfg, 'asgHandle')
     GDSGE_ASG_HANDLE = cfg.asgHandle;         %#ok<NASGU>
@@ -58,8 +65,17 @@ numNeedResolvedAfter = inf;
 if isfield(cfg, 'resolvePrintFreq'); resolveFreq = cfg.resolvePrintFreq; else; resolveFreq = 100; end
 if isfield(cfg, 'majorIter'); majorIter = cfg.majorIter; else; majorIter = 0; end
 
+% Diagnostics heartbeat: geometric backoff. Bare-cfg callers (unit tests) omit
+% diagnoseAt entirely, which disables it.
+if isfield(cfg, 'diagnoseAt'); diagnoseAt = cfg.diagnoseAt; else; diagnoseAt = 0; end
+nextDiagnose = diagnoseAt;
+
+% Independent of useMexResolve: the sweep and the restart batch are separate
+% capabilities, and the simulate path wants the second without the first.
+% adaptInSol still disqualifies it - that hook rewrites LB/UB between retries in
+% MATLAB, which the in-MEX batch loop cannot see.
 useMexRandomize = isfield(cfg,'useMexRandomize') && cfg.useMexRandomize ...
-    && isempty(cfg.adaptInSol) && useMexResolve;
+    && isempty(cfg.adaptInSol);
 if useMexRandomize
     % In-MEX randomized restart: each MEX call runs up to `batch` full
     % minor-iterations (neighbor sweep + random restart) internally. MATLAB
@@ -89,13 +105,7 @@ if useMexRandomize
         gdsge.runtime.printResolveProgress('round', '', majorIter, minorIter, actualTrials, ...
             nnz((f > cfg.tolSol) | isnan(f)), max(f(:)), resolveFreq, cfg.verboseRetry, false);
 
-        % Periodic diagnostics heartbeat (now at batch granularity).
-        if isfield(cfg,'diagnoseAt') && cfg.diagnoseAt > 0 ...
-                && mod(minorIter, cfg.diagnoseAt) == 0 && minorIter < cfg.maxMinorIter ...
-                && (max(isnan(f)) || max(f(:)) > cfg.tolSol)
-            fprintf('[gdsge] convergence diagnostics (retry %d, continuing):\n%s\n', ...
-                minorIter, gdsge.runtime.diagnoseConvergence(sol, lb, ub, f, eqVal, cfg, 'summary'));
-        end
+        nextDiagnose = heartbeat(nextDiagnose, diagnoseAt, minorIter, cfg, sol, lb, ub, f, eqVal);
     end
 else
 while ((max(isnan(f)) || max(f(:)) > cfg.tolSol) && minorIter < cfg.maxMinorIter)
@@ -172,15 +182,7 @@ while ((max(isnan(f)) || max(f(:)) > cfg.tolSol) && minorIter < cfg.maxMinorIter
     gdsge.runtime.printResolveProgress('round', '', majorIter, minorIter, roundStep, ...
         nnz((f > cfg.tolSol) | isnan(f)), max(f(:)), resolveFreq, cfg.verboseRetry, false);
 
-    % Periodic diagnostics: a summary heartbeat every cfg.diagnoseAt retries
-    % while still stuck. The final block prints after the loop, so skip the cap
-    % iteration here to avoid a duplicate at minorIter == maxMinorIter.
-    if isfield(cfg,'diagnoseAt') && cfg.diagnoseAt > 0 ...
-            && mod(minorIter, cfg.diagnoseAt) == 0 && minorIter < cfg.maxMinorIter ...
-            && (max(isnan(f)) || max(f(:)) > cfg.tolSol)
-        fprintf('[gdsge] convergence diagnostics (retry %d, continuing):\n%s\n', ...
-            minorIter, gdsge.runtime.diagnoseConvergence(sol, lb, ub, f, eqVal, cfg, 'summary'));
-    end
+    nextDiagnose = heartbeat(nextDiagnose, diagnoseAt, minorIter, cfg, sol, lb, ub, f, eqVal);
 end
 end   % closes the `else` wrapping the legacy resolve loop (useMexRandomize branch)
 
@@ -204,4 +206,27 @@ diag = struct();
 diag.needResolved = (f > cfg.tolSol) | isnan(f);
 diag.worstF = max(f(:));
 diag.minorIters = minorIter;
+end
+
+function nextDiagnose = heartbeat(nextDiagnose, diagnoseAt, minorIter, cfg, sol, lb, ub, f, eqVal)
+% Diagnostics heartbeat with geometric backoff: fires at diagnoseAt, then at
+% each doubling. Threshold-crossing rather than mod(), because the in-MEX
+% randomize branch advances minorIter by a whole batch and would otherwise
+% jump clean over a trigger. The cap iteration is left to the FINAL block, so
+% there is no duplicate at minorIter == maxMinorIter.
+%
+% NOTE: this is a print-only helper. It must never call the model MEX - the
+% MEX reads its inputs from ITS CALLER's workspace, so every mexFn call has to
+% stay in solveProblems' own body (see the CONTRACT comment at the top).
+if diagnoseAt <= 0 || minorIter < nextDiagnose || minorIter >= cfg.maxMinorIter
+    return;
+end
+if ~(max(isnan(f)) || max(f(:)) > cfg.tolSol)
+    return;                       % everything converged; nothing to report
+end
+fprintf('[gdsge] convergence diagnostics (retry %d, continuing):\n%s\n', ...
+    minorIter, gdsge.runtime.diagnoseConvergence(sol, lb, ub, f, eqVal, cfg, 'summary'));
+while nextDiagnose <= minorIter
+    nextDiagnose = nextDiagnose * 2;
+end
 end

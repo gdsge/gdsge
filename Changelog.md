@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-07-31
+
+Driven by `TechBubblesV4nblogKRAv3`, an asset-pricing model with growth shocks whose
+simulation needs thousands of randomized solver restarts per period.
+
+### Fixed
+
+- Resolve retries are unbounded again by default (`MaxMinorIter = inf`, as in the
+  pre-refactor toolbox). The previous default of 200 did not fail loudly: `simulate`
+  wrote the unconverged solution into `SimuRslt` and fed it forward as the next
+  period's state, so a model needing more restarts produced plausible-looking but
+  wholly wrong paths. Set `MaxMinorIter` yourself to restore a bound — doing so also
+  arms the existing hard error on the iteration path.
+- `simulate` no longer crashes with `MATLAB:badsubscript` when it reports unconverged
+  samples. The report was grid-shaped and mis-indexed for any model with more than one
+  state; it now names the sample and its own shock and state values.
+
+### Changed
+
+- `simulate` reports resolve activity once per `SimuPrintFreq` checkpoint
+  (`resolve: N/M periods retried, ... worst period P`) instead of a full diagnostics
+  block every few retries. Set `DiagnoseMinorIter` to re-enable the per-solve block.
+- The diagnostics heartbeat backs off geometrically (at `DiagnoseMinorIter`, then each
+  doubling) rather than firing at a fixed interval, so a long solve reports about
+  `log2(N)` times instead of `N/interval`.
+
+### Added
+
+- An install self-check runs once per session and reports a truncated or empty toolbox
+  source file as `gdsge:install:corrupt`, naming every damaged file and the remedy,
+  instead of MATLAB's `MATLAB:scriptNotAFunction` pointing at an internal file.
+- `simulate` batches randomized solver restarts inside the MEX (`UseMexRandomize`, on by
+  default), instead of one MEX call per restart. Restart-heavy simulations get roughly
+  1.1–1.8× faster depending on `num_samples` — the gain is largest when samples are few,
+  because that is when per-call overhead dominates. Results are unchanged (agreement with
+  the pre-refactor toolbox stays at ~1e-9); set `UseMexRandomize=0` for the MATLAB restart
+  loop, which draws from MATLAB's RNG instead.
+
 ## [0.2.1] - 2026-07-03
 
 Driven by a large CCP (discrete-choice) model: 13 states, adaptive sparse grids, and
