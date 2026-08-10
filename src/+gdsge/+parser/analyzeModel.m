@@ -19,6 +19,12 @@ for i = 1:numel(ir.variables.policy); policyNames{i} = ir.variables.policy{i}.na
 auxNames = cell(1, numel(ir.variables.aux));
 for i = 1:numel(ir.variables.aux); auxNames{i} = ir.variables.aux{i}.name; end
 baseKnown = [baseKnown, policyNames, auxNames];
+% global aux (constructed post-iteration) have no state-by-state value during
+% the solve: not in baseKnown (reference -> unknownName) and never a target.
+auxGlobalNames = {};
+if isfield(ir.variables, 'auxGlobal')
+    auxGlobalNames = cellfun(@(g) g.name, ir.variables.auxGlobal, 'UniformOutput', false);
+end
 basePrimeable = [reshape(ir.shocks.names, 1, []), policyNames];  % + interp outputs below
 
 tensorNames = cellfun(@(t) t.name, ir.variables.tensor, 'UniformOutput', false);
@@ -52,13 +58,16 @@ for kR = 1:numel(ir.model.regions)
     end
 
     known = baseKnown; primeable = basePrimeable;
+    assigned = {};
     for i = 1:numel(R.statements)
         s = R.statements{i};
         switch s.type
             case 'assign'
+                checkGlobalTarget(s.target, auxGlobalNames, kR, i);
                 checkNames(s.expr, known, primeable, ...
                     sprintf('region %d statement %d (assign %s)', kR, i, s.target));
                 known{end+1} = s.target; %#ok<AGROW>
+                assigned{end+1} = s.target; %#ok<AGROW>
                 if s.primed; primeable{end+1} = s.target; end %#ok<AGROW>
             case 'reduction'
                 if ~(isfield(ir.shocks.transitions, s.transRef) || isSquareParam(ir, s.transRef))
@@ -66,9 +75,11 @@ for kR = 1:numel(ir.model.regions)
                         'region %d statement %d: reduction transition "%s" is not a declared transition matrix', ...
                         kR, i, s.transRef);
                 end
+                checkGlobalTarget(s.target, auxGlobalNames, kR, i);
                 checkNames(s.body, known, primeable, ...
                     sprintf('region %d statement %d (reduction %s)', kR, i, s.target));
                 known{end+1} = s.target; %#ok<AGROW>
+                assigned{end+1} = s.target; %#ok<AGROW>
             case 'interpCall'
                 if strcmp(s.interpRef, 'GDSGE_INTERP_VEC')
                     nDecl = numel(ir.variables.interp);
@@ -98,9 +109,25 @@ for kR = 1:numel(ir.model.regions)
                     checkNames(s.args{a}, known, primeable, ...
                         sprintf('region %d statement %d (interp call)', kR, i));
                 end
+                for t = 1:numel(s.targets)
+                    checkGlobalTarget(s.targets{t}, auxGlobalNames, kR, i);
+                end
                 known = [known, reshape(s.targets, 1, [])]; %#ok<AGROW>
+                assigned = [assigned, reshape(s.targets, 1, [])]; %#ok<AGROW>
                 primeable = [primeable, reshape(s.targets, 1, [])]; %#ok<AGROW>
         end
+    end
+
+    % Every ordinary var_aux must be assigned in every region: the C++ emit
+    % exports GDSGE_AUX[slot] unconditionally, so a miss used to surface as an
+    % opaque mex-compile "undeclared identifier". Fail here instead.
+    missing = setdiff(auxNames, assigned);
+    if ~isempty(missing)
+        error('gdsge:parser:auxNotAssigned', ...
+            ['var_aux not assigned in the model block (region %d): %s. ' ...
+             'An ordinary var_aux must be assigned state-by-state in the model ' ...
+             'block; only a global var_aux (defined via GDSGE_DER in the ' ...
+             'var_aux section) may omit this.'], kR, strjoin(missing, ', '));
     end
 
     nEq = 0;
@@ -239,6 +266,15 @@ end
 if nUnknown ~= nEq
     error('gdsge:parser:notSquare', ...
         'model_init system is not square: %d unknowns vs %d equations', nUnknown, nEq);
+end
+end
+
+function checkGlobalTarget(target, auxGlobalNames, kR, i)
+if ismember(target, auxGlobalNames)
+    error('gdsge:parser:globalAuxAssignedInModel', ...
+        ['region %d statement %d: "%s" is a global var_aux (defined via ' ...
+         'GDSGE_DER in the var_aux section) and must not be assigned in the ' ...
+         'model block — it is constructed after each iteration.'], kR, i, target);
 end
 end
 

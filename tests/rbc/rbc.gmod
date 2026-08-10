@@ -1,0 +1,52 @@
+% RBC with capital and a 2-state TFP chain — the global var_aux (GDSGE_DER)
+% flagship example: MPK is the spline-derivative of Y w.r.t. K, constructed
+% after each iteration, compared against the closed-form MPK_analytical
+% (exact regardless of solution accuracy, since Y = z*K^alpha is exogenous).
+% Adapted from the old toolbox's tests/rbc/rbc_simple.gmod.
+parameters beta sigma alpha delta;
+beta  = 0.99;		% discount factor
+sigma = 2.0;		% CRRA coefficient
+alpha = 0.36;		% capital share
+delta = 0.025;		% depreciation rate
+
+% Exogenous variables
+var_shock z;
+z = [0.99, 1.01];
+shock_trans = [0.9, 0.1; 0.1, 0.9];
+shock_num = 2;
+
+% Endogenous variables
+var_state K;
+K = linspace(30,45,101);
+var_interp c_interp;
+initial c_interp z.*K.^alpha+(1-delta)*K;
+c_interp = c;
+var_policy K_next c;
+inbound K_next 0.1 50;
+inbound c 1e-3 50;
+var_aux w Y MPK_analytical MPK;
+MPK = GDSGE_DER(Y, K);
+
+% Model
+model;
+  c_future' = c_interp'(K_next);
+  kret_next' = z'*alpha*K_next^(alpha-1) + 1-delta;
+  euler_residual = c^(-sigma) - beta*GDSGE_EXPECT{c_future'^(-sigma)*kret_next'};
+  market_clear = z*K^alpha + (1-delta)*K - c - K_next;
+  w = z*(1-alpha)*K^alpha;
+  Y = z*K^alpha;
+  MPK_analytical = alpha*z*K^(alpha-1);
+  equations;
+    euler_residual;
+    market_clear;
+  end;
+end;
+
+simulate;
+  num_periods = 100;
+  num_samples = 24;
+  initial K 35;
+  initial shock 1;
+  var_simu c w Y MPK MPK_analytical;
+  K' = K_next;
+end;

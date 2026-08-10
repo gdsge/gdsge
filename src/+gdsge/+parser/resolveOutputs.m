@@ -25,12 +25,18 @@ end
 
 polNames = cellfun(@(p) p.name, variables.policy, 'UniformOutput', false);
 auxNames = cellfun(@(a) a.name, variables.aux, 'UniformOutput', false);
+globalNames = {};
+if isfield(variables, 'auxGlobal')
+    globalNames = cellfun(@(g) g.name, variables.auxGlobal, 'UniformOutput', false);
+end
 pos = 1;
 for i = 1:numel(variables.aux); pos = max(pos, variables.aux{i}.slot(2) + 1); end
 added = {};
 for i = 1:numel(variables.output)
     n = variables.output{i};
-    if ismember(n, polNames) || ismember(n, auxNames); continue; end
+    % global aux are already exportable (post-iteration values, no MEX slot);
+    % re-promoting one into variables.aux would corrupt the slot layout
+    if ismember(n, polNames) || ismember(n, auxNames) || ismember(n, globalNames); continue; end
     variables.aux{end+1} = struct('name', n, 'length', 1, 'slot', [pos, pos]);
     auxNames{end+1} = n; %#ok<AGROW>
     pos = pos + 1;

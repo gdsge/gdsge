@@ -8,7 +8,7 @@ if nargin < 6 || isempty(model)
         'statements', {{}}, 'equations', {{}}) }});
 end
 if nargin < 7; modelInit = []; end
-ir.irVersion = '2.0.0';
+ir.irVersion = '2.1.0';
 ir.modelName = modelName;
 ir.params    = decl.params;
 ir.setup     = decl.setupBlocks;

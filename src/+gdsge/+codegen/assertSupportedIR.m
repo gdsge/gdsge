@@ -12,4 +12,13 @@ if ~isempty(ir.variables.tensor) && strcmp(ir.options.interpMethod, 'asg')
         ['var_tensor is not supported with ASG (tensor(s): %s); the C++-pop ' ...
          'path ASG would require is deferred.'], strjoin(names, ', '));
 end
+% Global var_aux (GDSGE_DER) needs spline construction + analytic gradient
+% evaluation on the MATLAB side; asg_mex exposes no gradient command yet.
+if isfield(ir.variables, 'auxGlobal') && ~isempty(ir.variables.auxGlobal) ...
+        && ~strcmp(ir.options.interpMethod, 'spline')
+    names = cellfun(@(g) g.name, ir.variables.auxGlobal, 'UniformOutput', false);
+    error('gdsge:codegen:globalAuxAsgUnsupported', ...
+        ['Global var_aux (%s) require interpMethod = spline; ASG support needs ' ...
+         'an asg_mex gradient command (deferred).'], strjoin(names, ', '));
+end
 end

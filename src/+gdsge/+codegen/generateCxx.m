@@ -72,7 +72,10 @@ files = struct();
 files.cppFile    = fullfile(outDir, ['mex_' ir.modelName '.cpp']);
 gdsge.codegen.writeText(files.cppFile, cpp);
 
-% Whole-loop SIMU_INTERP simulate MEX (spline + MEX-expressible simulate block).
+% Whole-loop simulate MEX (spline + MEX-expressible simulate block). Emitted
+% regardless of the SIMU_RESOLVE/SIMU_INTERP toggle (ADR-0002) so the compile
+% cache key — mex cpp + simulate mex cpp — is invariant to the toggle and
+% flipping it only rewrites simulate_<model>.m.
 files.simuMexFile = '';
 if gdsge.codegen.cxx.isSimuMexExpressible(ir)
     files.simuMexFile = fullfile(outDir, ['simulate_' ir.modelName '_mex.cpp']);

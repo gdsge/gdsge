@@ -1,11 +1,13 @@
 function tf = isSimuMexExpressible(ir)
-% ISSIMUMEXEXPRESSIBLE  true if a SIMU_INTERP spline model's simulate block can
-%   run in simulate_<model>_mex: var_simu entries resolve to output vars, and
-%   every transition RHS is a single output-var name (primed or unprimed).
-%   Otherwise the model uses the per-period interp_eval_mex fallback loop.
+% ISSIMUMEXEXPRESSIBLE  true if a spline model's simulate block can run in
+%   simulate_<model>_mex: var_simu entries resolve to output vars, and every
+%   transition RHS is a single output-var name (primed or unprimed). Otherwise
+%   the SIMU_INTERP variant uses the per-period interp_eval_mex fallback loop.
+%   Deliberately independent of the SIMU_RESOLVE/SIMU_INTERP toggle (ADR-0002):
+%   the simulate MEX is generated for every expressible model, so the compile
+%   cache is invariant to the toggle.
 tf = false;
 if strcmp(ir.options.interpMethod, 'asg'); return; end
-if ~(isfield(ir.options,'simuInterp') && ir.options.simuInterp == 1); return; end
 outNames = ir.variables.output;
 isOut = @(n) any(strcmp(n, outNames));
 for k = 1:numel(ir.simulate.varSimu)

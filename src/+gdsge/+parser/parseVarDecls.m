@@ -10,7 +10,7 @@ decls = struct('paramNames',{{}}, 'shockNames',{{}}, 'stateNames',{{}}, ...
     'policy',{{}}, 'aux',{{}}, 'interpNames',{{}}, 'outputNames',{{}}, ...
     'tensorNames',{{}}, 'tensorAssign',{{}}, 'otherNames',{{}}, 'bounds',{{}}, ...
     'interpInitial',{{}}, 'interpUpdate',{{}}, 'gridText',{{}}, 'setupStmts',{{}}, ...
-    'policyInit',{{}}, 'auxInit',{{}}, 'boundsInit',{{}});
+    'policyInit',{{}}, 'auxInit',{{}}, 'boundsInit',{{}}, 'auxGlobalDefs',{{}});
 
 DECL_KINDS = {'parameters','var_shock','var_state','var_policy','var_aux', ...
     'var_interp','var_tensor','var_output','var_others','var_policy_init','var_aux_init'};
@@ -66,6 +66,8 @@ end
 % a command-form statement whose first word is a near-miss of a declaration
 % keyword is almost certainly a typo'd declaration; fail early with a
 % suggestion instead of obscurely at eval.
+auxDeclNames = cellfun(@(a) a.name, decls.aux, 'UniformOutput', false);
+globalDefAt = false(1, numel(stmts));
 for j = 1:numel(assignIdx)
     st = stmts{assignIdx(j)};
     lhs = assignLHS(st);
@@ -81,6 +83,15 @@ for j = 1:numel(assignIdx)
         % var_tensor assignment: capture as opaque text (codegen emits it with
         % ndgrid broadcasting). Plain eval would dimension-mismatch.
         decls.tensorAssign{end+1} = struct('name', lhs, 'expr', rhs); %#ok<AGROW>
+    elseif ismember(lhs, auxDeclNames)
+        % global var_aux definition: captured as text (parseDeclarations
+        % validates the operator), never eval'd, never replayed as setup.
+        decls.auxGlobalDefs{end+1} = struct('name', lhs, 'expr', rhs); %#ok<AGROW>
+        globalDefAt(assignIdx(j)) = true;
+    elseif ~isempty(regexp(rhs, '^GDSGE_DER\s*\(', 'once'))
+        error('gdsge:parser:globalAuxBadTarget', ...
+            ['GDSGE_DER defines a global var_aux, but "%s" is not a declared ' ...
+             'var_aux (var_aux_init, states, and parameters cannot be global).'], lhs);
     else
         decls.setupStmts{end+1} = st; %#ok<AGROW>
         if ismember(lhs, decls.stateNames)
@@ -120,6 +131,13 @@ for i = 1:numel(stmts)
         curKind = key; headerOpen = true;
     else
         headerOpen = false;
+        if globalDefAt(i) && ~strcmp(curKind, 'var_aux')
+            error('gdsge:parser:globalAuxPlacement', ...
+                ['Global var_aux definition "%s" must appear in the var_aux ' ...
+                 'declaration section (after the var_aux line, before the next ' ...
+                 'declaration keyword); found it in the "%s" section.'], ...
+                assignLHS(st), curKind);
+        end
         expected = expectedSection(st, key, decls);
         if isKey(setupSet, st)
             curBody{end+1} = st; %#ok<AGROW>

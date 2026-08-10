@@ -12,6 +12,18 @@ for i = 1:numel(ir.variables.aux); nAux = max(nAux, ir.variables.aux{i}.slot(2))
 stateList = strjoin(ir.states.names, ',');
 stateGridCell = ['{' stateList '}'];
 stateNameCell = ['{''' strjoin(ir.states.names, ''',''') '''}'];
+% Global var_aux in var_simu cannot be re-solved (no model-body definition);
+% they are read off IterRslt.output_interp instead — warn at codegen (spec).
+auxGlobal = {};
+if isfield(ir.variables, 'auxGlobal'); auxGlobal = ir.variables.auxGlobal; end
+globalNames = cellfun(@(g) g.name, auxGlobal, 'UniformOutput', false);
+simuGlobals = intersect(ir.simulate.varSimu, globalNames, 'stable');
+if ~isempty(simuGlobals)
+    warning('gdsge:codegen:globalAuxInterpolatedInResolve', ...
+        ['SIMU_RESOLVE: global var_aux (%s) in var_simu are interpolated from ' ...
+         'IterRslt.output_interp (order OutputInterpOrder), not re-solved.'], ...
+        strjoin(simuGlobals, ', '));
+end
 solComp     = gdsge.codegen.mat.solComponentNames(ir);
 solNamesLit = ['{''' strjoin(solComp, ''',''') '''}'];
 simuStateRows = strjoin(cellfun(@(s) ['SimuRslt.' s '(:,GDSGE_t)'''], ...
@@ -42,6 +54,17 @@ for i = 1:numel(ir.states.names)
 end
 w.add('shock_num = IterRslt.shock_num;');
 w.add('GDSGE_SPLINE_VEC = IterRslt.pp.GDSGE_SPLINE_VEC;');
+if ~isempty(simuGlobals)
+    w.add('if ~isfield(IterRslt, ''output_interp'')');
+    w.add('    error(''gdsge:simulate:noOutputInterp'', ...');
+    w.add('        [''global var_aux (%s) in var_simu need IterRslt.output_interp; '' ...', ...
+        strjoin(simuGlobals, ', '));
+    w.add('         ''re-run iter_%s with CONSTRUCT_OUTPUT=1'']);', m);
+    w.add('end');
+    w.add('GDSGE_OUTPUT_PP = IterRslt.output_interp;');
+    w.add('GDSGE_NCOMP_OUT = IterRslt.output_interp.GDSGE_NCOMP;');
+    w.add('GDSGE_OUTPUT_VAR_INDEX = IterRslt.output_var_index;');
+end
 w.blank();
 w.add('GDSGE_OPTIONS_VALID = %s;', gdsge.codegen.mat.optionsWhitelist(ir, {'init','GEN_SHOCK_START_PERIOD'}));
 w.add('if nargin < 2; GDSGE_OPTIONS = struct(); end');
@@ -178,6 +201,12 @@ w.blank();
 w.addRaw(indent4(unpk.unpack));
 w.addRaw(indent4(unpk.unpackAux));
 w.blank();
+for i = 1:numel(simuGlobals)
+    n = simuGlobals{i};
+    w.add('%s = interp_eval_mex(int32(NumThreads), GDSGE_OUTPUT_PP, [%s], int32((shock''-1)*GDSGE_NCOMP_OUT + (GDSGE_OUTPUT_VAR_INDEX.%s(1)-1)));', ...
+        n, simuStateRows, n);
+end
+if ~isempty(simuGlobals); w.blank(); end
 w.add('GDSGE_SHOCK_VAR_LINEAR_INDEX = SimuRslt.shock(:,GDSGE_t+1) + GDSGE_SHOCK_VAR_INDEX_BASE;');
 w.addRaw(indent4(simu.assign));
 w.blank();

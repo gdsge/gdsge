@@ -33,6 +33,14 @@ for i = 1:numel(ir.variables.aux)
         wZ.add('%s=reshape(%s,[%d GDSGE_SIZE]);', v.name, v.name, v.length);
     end
 end
+% global var_aux: no GDSGE_AUX slot (constructed post-solve, already
+% [shock_num, nStates]); only the save-time reshape applies.
+if isfield(ir.variables, 'auxGlobal')
+    for i = 1:numel(ir.variables.auxGlobal)
+        n = ir.variables.auxGlobal{i}.name;
+        wZ.add('%s=reshape(%s,GDSGE_SIZE);', n, n);
+    end
+end
 frag = struct('unpack', wU.str(), 'unpackAux', wA.str(), ...
     'reshapeShock', wS.str(), 'reshapeSize', wZ.str());
 end

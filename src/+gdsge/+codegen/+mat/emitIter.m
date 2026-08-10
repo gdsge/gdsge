@@ -225,6 +225,18 @@ w.addRaw(indent4(unpk.unpack));
 w.addRaw(indent4(unpk.unpackAux));
 w.addRaw(indent4(unpk.reshapeShock));
 w.blank();
+% ---- global var_aux: constructed from the whole solved function, BEFORE the
+% var_interp updates so updates like MPK_interp = MPK see this iteration's
+% values. Definition order — later globals may reference earlier ones.
+auxGlobal = {};
+if isfield(ir.variables, 'auxGlobal'); auxGlobal = ir.variables.auxGlobal; end
+for i = 1:numel(auxGlobal)
+    g = auxGlobal{i};
+    wrtDim = find(strcmp(ir.states.names, g.wrt), 1);
+    w.add('%s = gdsge.runtime.constructAuxGlobalDer(%s, %s, GDSGE_SIZE_STATE, INTERP_ORDER, EXTRAP_ORDER, %d, NumThreads);', ...
+        g.name, g.of, stateGridCell, wrtDim);
+end
+if ~isempty(auxGlobal); w.blank(); end
 for i = 1:numel(ir.interp)
     it = ir.interp{i};
     w.add('GDSGE_NEW_%s = %s;', it.name, it.updateExpr);

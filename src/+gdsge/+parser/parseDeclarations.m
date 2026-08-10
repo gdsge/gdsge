@@ -54,10 +54,17 @@ states = struct('names', {decls.stateNames}, 'grids', grids);
 
 % ----- variables (+ slots) ------------------------------------------------
 % Every declared var_tensor must carry an assignment (the broadcast RHS).
+% Aux declared with a definition statement in the var_aux section are *global*
+% aux (constructed post-iteration from the whole solved function); they carry
+% no GDSGE_AUX slot, so ordinary aux slots stay contiguous over the remainder.
 tensorAssign = orderTensorAssign(decls.tensorNames, decls.tensorAssign);
+auxGlobal = resolveAuxGlobal(decls);
+globalNames = cellfun(@(g) g.name, auxGlobal, 'UniformOutput', false);
+ordinaryAux = decls.aux(~cellfun(@(a) ismember(a.name, globalNames), decls.aux));
 variables = struct( ...
     'policy', {assignSlots(decls.policy)}, ...
-    'aux',    {assignSlots(decls.aux)}, ...
+    'aux',    {assignSlots(ordinaryAux)}, ...
+    'auxGlobal', {auxGlobal}, ...
     'interp', {decls.interpNames}, ...
     'tensor', {tensorAssign}, ...
     'output', {decls.outputNames}, ...
@@ -117,6 +124,65 @@ function e = lookupExpr(lst, name)
 e = '';
 for i = 1:numel(lst)
     if strcmp(lst{i}.name, name); e = lst{i}.expr; return; end
+end
+end
+
+function items = resolveAuxGlobal(decls)
+% Validate captured global var_aux definitions and build the IR items
+% {name, op, of, wrt} in definition order. GDSGE_DER(v, s): v must be a
+% var_policy, an ordinary var_aux, or an EARLIER-defined global var_aux
+% (chaining); s must be a var_state.
+defs = decls.auxGlobalDefs;
+items = cell(1, numel(defs));
+policyNames = cellfun(@(p) p.name, decls.policy, 'UniformOutput', false);
+auxNames    = cellfun(@(a) a.name, decls.aux,    'UniformOutput', false);
+defNames    = cellfun(@(d) d.name, defs, 'UniformOutput', false);
+ordinaryNames = setdiff(auxNames, defNames, 'stable');
+earlier = {};
+for i = 1:numel(defs)
+    d = defs{i};
+    if ismember(d.name, cellfun(@(g) g.name, items(1:i-1), 'UniformOutput', false))
+        error('gdsge:parser:globalAuxDuplicateDef', ...
+            'Global var_aux "%s" is defined more than once', d.name);
+    end
+    m = regexp(d.expr, '^GDSGE_DER\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)$', 'tokens', 'once');
+    if isempty(m)
+        error('gdsge:parser:globalAuxBadOperator', ...
+            ['Definition of var_aux "%s" must be a global-aux operator, e.g. ' ...
+             '"%s = GDSGE_DER(<var>, <state>);" — got "%s = %s;". (An ordinary ' ...
+             'var_aux is assigned in the model block instead.)'], ...
+            d.name, d.name, d.name, d.expr);
+    end
+    of = m{1}; wrt = m{2};
+    if lengthOf(decls.aux, d.name) ~= 1
+        error('gdsge:parser:globalAuxVectorUnsupported', ...
+            'Global var_aux "%s" must be declared with length 1 (no [N] size)', d.name);
+    end
+    srcLen = max(lengthOf(decls.policy, of), lengthOf(decls.aux, of));
+    if srcLen > 1
+        error('gdsge:parser:globalAuxVectorUnsupported', ...
+            'GDSGE_DER source "%s" (for "%s") must be a length-1 variable', of, d.name);
+    end
+    if ~ismember(wrt, decls.stateNames)
+        error('gdsge:parser:globalAuxBadState', ...
+            'GDSGE_DER(%s, %s) for "%s": "%s" is not a declared var_state', ...
+            of, wrt, d.name, wrt);
+    end
+    if ~ismember(of, [policyNames, ordinaryNames, earlier])
+        error('gdsge:parser:globalAuxUnknownSource', ...
+            ['GDSGE_DER(%s, %s) for "%s": "%s" is not a var_policy, an ordinary ' ...
+             'var_aux, or an earlier-defined global var_aux'], of, wrt, d.name, of);
+    end
+    items{i} = struct('name', d.name, 'op', 'der', 'of', of, 'wrt', wrt);
+    earlier{end+1} = d.name; %#ok<AGROW>
+end
+end
+
+function n = lengthOf(sizedItems, name)
+% Declared length of NAME in a parseSizedNames list; 0 when absent.
+n = 0;
+for i = 1:numel(sizedItems)
+    if strcmp(sizedItems{i}.name, name); n = sizedItems{i}.length; return; end
 end
 end
 

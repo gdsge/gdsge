@@ -193,6 +193,17 @@ backward compatible. Build vertical-slice first on **HeatonLucas1996**, autodiff
   remaining open items are the deferred sub-phases **8b** (SymPy ASG+pchip) and **7e-full
   remainder** (C++-body `var_tensor`), plus a logged perf follow-up (safe_assets iter overhead).
 
+- ☑ **Global var_aux / `GDSGE_DER`** (done 2026-08-10) — new aux class defined in the
+  var_aux declaration section (`MPK = GDSGE_DER(Y, K);`), constructed after each iteration
+  as the analytic spline partial derivative (new `interp_der_mex` kernel over
+  `interp_eval_double.h::recder4/2`), feeding back via ordinary var_interp updates
+  (ADR-0001). IR `variables.auxGlobal`, minor bump 2.1.0. Bundled: always-generate the
+  simulate MEX for expressible models so the `SIMU_RESOLVE`/`SIMU_INTERP` toggle is
+  cache-invariant (ADR-0002); new `gdsge:parser:auxNotAssigned` check; codegen warnings for
+  interpolated globals under resolve and for the non-expressible SIMU_INTERP fallback.
+  Example + gates: `tests/rbc/` (rbc + feedback variant; spline MPK matches the closed form
+  to ~2.5e-9). Spec: `docs/superpowers/specs/2026-08-09-global-var-aux-gdsge-der.md`.
+
 Each phase gets its own spec→plan→implement cycle (see `docs/superpowers/plans/`).
 
 ---

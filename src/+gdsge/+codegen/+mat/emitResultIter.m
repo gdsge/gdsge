@@ -10,6 +10,11 @@ end
 for i = 1:numel(ir.variables.aux)
     lenOf.(ir.variables.aux{i}.name) = ir.variables.aux{i}.length;
 end
+auxGlobal = {};
+if isfield(ir.variables, 'auxGlobal'); auxGlobal = ir.variables.auxGlobal; end
+for i = 1:numel(auxGlobal)
+    lenOf.(auxGlobal{i}.name) = 1;   % globals are always length 1
+end
 stateList = strjoin(ir.states.names, ',');            % 'w1'
 gridCell = ['{' stateList '}'];                        % '{w1}'
 
@@ -64,6 +69,10 @@ w.add('IterRslt.var_policy = GDSGE_VAR_POLICY;');
 w.add('GDSGE_VAR_AUX = struct();');
 for i = 1:numel(ir.variables.aux)
     n = ir.variables.aux{i}.name;
+    w.add('GDSGE_VAR_AUX.%s = %s;', n, n);
+end
+for i = 1:numel(auxGlobal)
+    n = auxGlobal{i}.name;
     w.add('GDSGE_VAR_AUX.%s = %s;', n, n);
 end
 w.add('GDSGE_VAR_AUX.GDSGE_EMPTY = GDSGE_EMPTY;');

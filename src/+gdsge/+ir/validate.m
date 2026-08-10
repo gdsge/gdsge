@@ -239,8 +239,10 @@ if isfield(ir,'states') && isfield(ir.states,'names') && iscell(ir.states.names)
 end
 pools.policyAux = {};
 if isfield(ir,'variables')
+    % global aux carry no MEX slot but are legal output/var_simu/bound refs
     pools.policyAux = [listNames(getfieldor(ir.variables,'policy')), ...
-                       listNames(getfieldor(ir.variables,'aux'))];
+                       listNames(getfieldor(ir.variables,'aux')), ...
+                       listNames(getfieldor(ir.variables,'auxGlobal'))];
 end
 pools.interpNames = listNames(getfieldor(ir, 'interp'));
 end

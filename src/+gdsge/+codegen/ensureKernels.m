@@ -8,5 +8,8 @@ if strcmp(ir.options.interpMethod, 'asg')
 else
     gdsge.codegen.ensureSplineConstructMex();
     gdsge.codegen.ensureInterpEvalMex();
+    if isfield(ir.variables, 'auxGlobal') && ~isempty(ir.variables.auxGlobal)
+        gdsge.codegen.ensureInterpDerMex();   % GDSGE_DER global-aux kernel
+    end
 end
 end

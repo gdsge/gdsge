@@ -92,6 +92,80 @@ inline double receval2(double* coefs, int* coefsSize, int xDim, int idim,
     return r;
 }
 
+// --- analytic partial derivative along one dim (GDSGE_DER) ----------------
+// Same recursion shape as receval4/receval2; at derDim the 1-D Horner is
+// replaced by the derivative Horner (children collapse via plain receval).
+// xsite is the offset-to-left-knot coordinate, whose derivative w.r.t. the
+// site is 1, so no chain factor is needed.
+inline double recder4(double* coefs, int* coefsSize, int xDim, int idim,
+                      double* xsite, int* cellOfSite, int shift, int derDim)
+{
+    double r;
+    if (idim == xDim - 1) {
+        double* pCoefs = coefs + shift + (*cellOfSite + 1) * 4;
+        if (idim == derDim) {
+            r = 3.0 * *(--pCoefs); r *= *xsite;
+            r += 2.0 * *(--pCoefs); r *= *xsite;
+            r += *(--pCoefs);
+        }
+        else {
+            r = *(--pCoefs); r *= *xsite;
+            r += *(--pCoefs); r *= *xsite;
+            r += *(--pCoefs); r *= *xsite;
+            r += *(--pCoefs);
+        }
+    }
+    else {
+        shift += (*cellOfSite + 1) * 4;
+        if (idim == derDim) {
+            r = 3.0 * receval4(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2]);
+            r *= *xsite;
+            r += 2.0 * receval4(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2]);
+            r *= *xsite;
+            r += receval4(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2]);
+        }
+        else {
+            r = recder4(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2], derDim);
+            r *= *xsite;
+            r += recder4(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2], derDim);
+            r *= *xsite;
+            r += recder4(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2], derDim);
+            r *= *xsite;
+            r += recder4(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2], derDim);
+        }
+    }
+    return r;
+}
+
+inline double recder2(double* coefs, int* coefsSize, int xDim, int idim,
+                      double* xsite, int* cellOfSite, int shift, int derDim)
+{
+    double r;
+    if (idim == xDim - 1) {
+        double* pCoefs = coefs + shift + (*cellOfSite + 1) * 2;
+        if (idim == derDim) {
+            r = *(--pCoefs);
+        }
+        else {
+            r = *(--pCoefs); r *= *xsite;
+            r += *(--pCoefs);
+        }
+    }
+    else {
+        shift += (*cellOfSite + 1) * 2;
+        if (idim == derDim) {
+            --shift;
+            r = receval2(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, shift * coefsSize[idim + 2]);
+        }
+        else {
+            r = recder2(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2], derDim);
+            r *= *xsite;
+            r += recder2(coefs, coefsSize, xDim, idim + 1, xsite + 1, cellOfSite + 1, (--shift) * coefsSize[idim + 2], derDim);
+        }
+    }
+    return r;
+}
+
 // pp evaluator: read a Matlab pp (interp_construct_mex / myppual output), then
 // search once per site and nosearch_eval each stacked vector index.
 template <int XDIM, int ORDER>
@@ -130,6 +204,15 @@ struct PpEval {
             return receval4(coefs, coefsSize, XDIM, 0, xSiteToLeft, cellOfSite, vecIdx * coefsSize[1]);
         else
             return receval2(coefs, coefsSize, XDIM, 0, xSiteToLeft, cellOfSite, vecIdx * coefsSize[1]);
+    }
+
+    // analytic d/d(state dim derDim) at the site; derDim is 0-based
+    double nosearch_eval_der(double* xSiteToLeft, int* cellOfSite, int vecIdx, int derDim)
+    {
+        if (ORDER == 4)
+            return recder4(coefs, coefsSize, XDIM, 0, xSiteToLeft, cellOfSite, vecIdx * coefsSize[1], derDim);
+        else
+            return recder2(coefs, coefsSize, XDIM, 0, xSiteToLeft, cellOfSite, vecIdx * coefsSize[1], derDim);
     }
 };
 

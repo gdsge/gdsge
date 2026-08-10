@@ -37,7 +37,7 @@ the grids and parameters. The model-specific syntax sits on top.
 | `var_state` | endogenous state variables (define grids) |
 | `var_shock` | exogenous shocks; with `shock_num` and `shock_trans` |
 | `var_policy[/_init]` | unknowns solved per grid point (`_init` = for the `model_init` warm-up) |
-| `var_aux[/_init]` | auxiliary variables computed from the solution |
+| `var_aux[/_init]` | auxiliary variables computed from the solution; a var_aux *defined in the declaration section* via `GDSGE_DER` is a **global var_aux** (see below) |
 | `var_interp` | variables carried across iterations by interpolation |
 | `var_tensor` | ndgrid tensors over states (MATLAB-side: feed bounds / initial interp) |
 | `var_output` | variables written to `IterRslt` |
@@ -65,6 +65,23 @@ the grids and parameters. The model-specific syntax sits on top.
 - **Conditional regions** (Phase 9b): `model(X>0)` / `model(X==0)` declare independent square systems
   selected per grid point by the state guard; inside `equations`, `if/else/end` on the shock value
   fills an equation slot by branch.
+- **Global var_aux — `GDSGE_DER(v, s)`**: declare a plain `var_aux` and define it *in the var_aux
+  declaration section* (not the model block):
+
+  ```
+  var_aux Y MPK;
+  MPK = GDSGE_DER(Y, K);
+  ```
+
+  `MPK` becomes the analytic partial derivative w.r.t. state `s` of the spline fitted to `v`
+  (a var_policy, an ordinary var_aux, or an earlier global var_aux — chaining gives higher
+  derivatives), evaluated at every grid point per shock, using the model's
+  `INTERP_ORDER`/`ExtrapOrder`. It is constructed after each iteration — never assign it in the
+  model block — and lands in `IterRslt.var_aux` like any aux. To feed it back into the next
+  iteration, route it through a var_interp update (`MPK_interp = MPK;`) and reference
+  `MPK_interp'(...)` in the model. In `SIMU_RESOLVE` simulation, global aux in `var_simu` are
+  interpolated from `IterRslt.output_interp` (a codegen warning notes this). Cartesian spline
+  grids only (not ASG); length-1 variables only. Example: `tests/rbc/`.
 
 ### Macros
 

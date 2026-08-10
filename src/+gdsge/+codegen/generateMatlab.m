@@ -8,6 +8,13 @@ gdsge.codegen.assertSupportedIR(ir);
 files = struct();
 files.iterFile = fullfile(outDir, ['iter_' ir.modelName '.m']);
 simuInterp = isfield(ir.options, 'simuInterp') && ir.options.simuInterp == 1;
+if simuInterp && ~strcmp(ir.options.interpMethod, 'asg') ...
+        && ~gdsge.codegen.cxx.isSimuMexExpressible(ir)
+    warning('gdsge:codegen:simuInterpFallback', ...
+        ['SIMU_INTERP: the simulate block is not MEX-expressible (a var_simu ' ...
+         'entry outside var_output, or a non-name transition RHS); simulate_%s ' ...
+         'uses the slower per-period MATLAB interpolation loop.'], ir.modelName);
+end
 if strcmp(ir.options.interpMethod, 'asg')
     gdsge.codegen.writeText(files.iterFile, gdsge.codegen.mat.emitIterAsg(ir));
     if simuInterp

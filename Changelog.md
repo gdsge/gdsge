@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-08-10
+
+### Added
+
+- **Global var_aux via `GDSGE_DER(v, s)`** — declare a plain `var_aux` and define it in
+  the var_aux declaration section (`MPK = GDSGE_DER(Y, K);`): the analytic partial
+  derivative, w.r.t. one state, of the spline fitted to a policy/aux each iteration,
+  evaluated at every grid point per shock. Constructed after each iteration (never
+  assigned in the model block); feeds back through an ordinary var_interp update
+  (`MPK_interp = MPK;`); chaining earlier globals gives higher derivatives. Tracked in
+  the IR as `variables.auxGlobal` (minor bump to 2.1.0), merged into `IterRslt.var_aux`.
+  New `interp_der_mex` kernel (analytic spline gradient). Cartesian splines only;
+  ASG and sized (`[N]`) variables raise namespaced errors. Example + gates:
+  `tests/rbc/` (spline MPK matches the closed form to ~2.5e-9 on the grid).
+- An ordinary var_aux that is never assigned in the model block is now a clear parse
+  error (`gdsge:parser:auxNotAssigned`) instead of an opaque C++ compile failure.
+
+### Changed
+
+- The simulate MEX (`simulate_<model>_mex`) is generated for every MEX-expressible
+  spline model regardless of `SIMU_RESOLVE`/`SIMU_INTERP`, making the compile cache
+  invariant to the toggle: flipping it only rewrites `simulate_<model>.m`, with no
+  recompilation once cached.
+- `SIMU_INTERP` models whose simulate block is not MEX-expressible now warn at codegen
+  (`gdsge:codegen:simuInterpFallback`) instead of silently using the slower per-period
+  MATLAB loop. Under `SIMU_RESOLVE`, global var_aux listed in `var_simu` warn that they
+  are interpolated from `IterRslt.output_interp`.
+
 ## [0.2.2] - 2026-07-31
 
 Driven by `TechBubblesV4nblogKRAv3`, an asset-pricing model with growth shocks whose

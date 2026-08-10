@@ -97,7 +97,9 @@ Blocks: `parameters`, `var_state`, `var_shock`, `var_policy[/_init]`, `var_aux[/
 `simulate`, `pre_model`, `pre_iter`, `post_iter`, `pre_jac_code`, `post_jac_code`.
 Declarations: `inbound[/_init]` (+ `adaptive(factor)`), `initial`, `shock_num`,
 `shock_trans`. Operators: `GDSGE_EXPECT`, `GDSGE_MIN`, `GDSGE_MAX`, `GDSGE_PROD`,
-`GDSGE_INTERP_VEC` (and primed `'`). Markers: trailing `'` = future/next-state; `[N]` =
+`GDSGE_INTERP_VEC` (and primed `'`); `GDSGE_DER(v, s)` (new-toolbox only, 2026-08: defines a
+*global var_aux* in the var_aux declaration section — post-iteration spline derivative, see
+`CONTEXT.md` + `docs/adr/0001`). Markers: trailing `'` = future/next-state; `[N]` =
 shock-indexed array var. Built-ins: `GDSGE_Iter`, `TASK`, `OUTPUT_CONSTRUCT_CODE`. Macros:
 `#define`, `#for`, `#foreach`, `#if`, `#mat{}`, `#strcat_comma`, `include`, `cinclude`.
 Options: `USE_SPLINE/USE_ASG/USE_PCHIP`, `INTERP_ORDER`, `ExtrapOrder`,

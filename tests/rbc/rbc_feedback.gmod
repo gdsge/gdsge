@@ -1,0 +1,51 @@
+% Feedback variant of tests/rbc/rbc.gmod: the global var_aux MPK feeds back
+% into the next iteration through an explicit var_interp update
+% (MPK_interp = MPK), and the Euler equation prices capital off the
+% spline-derivative MPK_interp'(K_next) instead of the closed form — the
+% envelope-style loop the global-aux design exists for (ADR-0001).
+parameters beta sigma alpha delta;
+beta  = 0.99;
+sigma = 2.0;
+alpha = 0.36;
+delta = 0.025;
+
+var_shock z;
+z = [0.99, 1.01];
+shock_trans = [0.9, 0.1; 0.1, 0.9];
+shock_num = 2;
+
+var_state K;
+K = linspace(30,45,101);
+var_interp c_interp MPK_interp;
+initial c_interp z.*K.^alpha+(1-delta)*K;
+initial MPK_interp alpha*z.*K.^(alpha-1);
+c_interp = c;
+MPK_interp = MPK;
+var_policy K_next c;
+inbound K_next 0.1 50;
+inbound c 1e-3 50;
+var_aux Y MPK_analytical MPK;
+MPK = GDSGE_DER(Y, K);
+
+model;
+  c_future' = c_interp'(K_next);
+  MPK_next' = MPK_interp'(K_next);
+  kret_next' = MPK_next' + 1-delta;
+  euler_residual = c^(-sigma) - beta*GDSGE_EXPECT{c_future'^(-sigma)*kret_next'};
+  market_clear = z*K^alpha + (1-delta)*K - c - K_next;
+  Y = z*K^alpha;
+  MPK_analytical = alpha*z*K^(alpha-1);
+  equations;
+    euler_residual;
+    market_clear;
+  end;
+end;
+
+simulate;
+  num_periods = 100;
+  num_samples = 24;
+  initial K 35;
+  initial shock 1;
+  var_simu c Y MPK;
+  K' = K_next;
+end;

@@ -1,6 +1,6 @@
 # IR Schema (generated — do not edit by hand)
 
-Generated from `src/+gdsge/+ir/schema.m` by `gdsge.ir.gendoc`. irVersion: `2.0.0`.
+Generated from `src/+gdsge/+ir/schema.m` by `gdsge.ir.gendoc`. irVersion: `2.1.0`.
 
 ## Document sections
 
@@ -53,6 +53,12 @@ Generated from `src/+gdsge/+ir/schema.m` by `gdsge.ir.gendoc`. irVersion: `2.0.0
       - `name` : text (required)
       - `length` : scalar (required)
       - `slot` : matrix (required)
+  - `auxGlobal` : list of struct (optional)
+    - *(each item)*
+      - `name` : text (required)
+      - `op` : enum {der} (required)
+      - `of` : ref -> pool:policyAux (required)
+      - `wrt` : ref -> pool:states (required)
   - `interp` : list of ref -> pool:interpNames (required)
   - `tensor` : list of struct (required)
     - *(each item)*

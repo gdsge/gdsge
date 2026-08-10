@@ -8,6 +8,7 @@ testList = {
     'CaoKS2016'
     'GLSW2020'
     'Barro_et_al_2017'
+    'rbc'
     };
 for i=1:length(testList)
     fprintf('===========================================\n');
