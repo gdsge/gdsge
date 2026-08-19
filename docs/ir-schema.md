@@ -1,6 +1,6 @@
 # IR Schema (generated — do not edit by hand)
 
-Generated from `src/+gdsge/+ir/schema.m` by `gdsge.ir.gendoc`. irVersion: `2.1.0`.
+Generated from `src/+gdsge/+ir/schema.m` by `gdsge.ir.gendoc`. irVersion: `2.2.0`.
 
 ## Document sections
 
@@ -193,6 +193,14 @@ Generated from `src/+gdsge/+ir/schema.m` by `gdsge.ir.gendoc`. irVersion: `2.1.0
 - `target` : text (required)
 - `body` : tagged (nodes) (required)
 - `transRef` : ref -> pool:transitions (required)
+
+### `conditional`
+
+- `type` : enum {conditional} (required)
+- `cases` : list of struct (required)
+  - *(each item)*
+    - `cond` : text (required)
+    - `statements` : taggedList (stmts) (required)
 
 
 ## Equation kinds

@@ -77,6 +77,17 @@ for i = 1:numel(body.statements)
                 end
                 rows(st.target) = combine(d.partialsMap, rows);
             end
+        case 'conditional'
+            % ADR-0003: the derivative registry holds expressions referencing
+            % helper temporaries whose C++ scope dies at the branch's closing
+            % brace. Supporting this means materialising each branch target's
+            % value AND all its partials into outer-scope variables at every
+            % branch exit — deferred. Auto-mode never lands here (resolveBackend
+            % steers such models to adept); an explicit pin does.
+            error('gdsge:codegen:sympyConditionalStmt', ...
+                ['the SymPy Jacobian backend does not support conditional ' ...
+                 'statements (if/else) in the model body; use the adept ' ...
+                 'backend (UseAutoDiff=1 in the gmod, or GDSGE_BACKEND=adept).']);
         otherwise
             error('gdsge:codegen:sympyUnsupportedStmt', 'statement %s', st.type);
     end

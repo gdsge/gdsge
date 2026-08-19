@@ -7,7 +7,7 @@ function s = schema()
 %     .stmts      registry of model-statement specs, keyed by statement type
 %   Field kinds: scalar matrix text enum ref list map tagged taggedList struct.
 
-s.irVersion = '2.1.0';
+s.irVersion = '2.2.0';
 
 % ---- reusable item specs -------------------------------------------------
 varItem = fStruct(structOf('name', fText(), 'length', fScalar(), 'slot', fMatrix()));
@@ -156,6 +156,10 @@ s.nodes = structOf( ...
     'index',  fStruct(structOf('kind', fEnum({'index'}),  'base', fNode(), 'args', fNodeList())));
 
 % ---- model statement registry --------------------------------------------
+%      conditional: an if/elseif/else/end block among the model-body
+%      assignments (ADR-0003). Same 'cases' shape as eqkinds.conditional; the
+%      registry disambiguates the two. Recursive (a case holds a statement
+%      list), so nesting needs no extra shape.
 s.stmts = structOf( ...
     'assign', fStruct(structOf( ...
         'type', fEnum({'assign'}), 'target', fText(), 'primed', fScalar(), 'expr', fNode())), ...
@@ -164,7 +168,9 @@ s.stmts = structOf( ...
         'args', fNodeList(), 'interpRef', fText())), ...
     'reduction', fStruct(structOf( ...
         'type', fEnum({'reduction'}), 'kind', fEnum({'EXPECT','MIN','MAX','PROD'}), ...
-        'target', fText(), 'body', fNode(), 'transRef', fRef('transitions'))));
+        'target', fText(), 'body', fNode(), 'transRef', fRef('transitions'))), ...
+    'conditional', fStruct(structOf( ...
+        'type', fEnum({'conditional'}), 'cases', fList(stmtCaseItem()))));
 
 % ---- equation-kind registry (Phase 9b) -----------------------------------
 %      plain: a single residual (the pre-9b equation). conditional: a runtime
@@ -183,6 +189,9 @@ function s = fRef(pool), s.kind = 'ref';     s.required = true; s.pool = pool; e
 function s = fNode(),    s.kind = 'tagged';     s.required = true; s.registry = 'nodes'; s.tag = 'kind'; end
 function s = fNodeList(),s.kind = 'taggedList'; s.required = true; s.registry = 'nodes'; s.tag = 'kind'; end
 function s = fStmtList(),s.kind = 'taggedList'; s.required = true; s.registry = 'stmts'; s.tag = 'type'; end
+% A conditional-statement case: guard text ('' = else) + its own statements.
+% Built lazily as a function so the stmts registry can reference itself.
+function s = stmtCaseItem(), s = fStruct(structOf('cond', fText(), 'statements', fStmtList())); end
 function s = fList(item),s.kind = 'list';    s.required = true; s.item = item; end
 function s = fMap(val),  s.kind = 'map';     s.required = true; s.value = val; end
 function s = fStruct(flds), s.kind = 'struct'; s.required = true; s.fields = flds; end

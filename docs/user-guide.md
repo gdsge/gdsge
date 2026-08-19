@@ -42,7 +42,7 @@ the grids and parameters. The model-specific syntax sits on top.
 | `var_tensor` | ndgrid tensors over states (MATLAB-side: feed bounds / initial interp) |
 | `var_output` | variables written to `IterRslt` |
 | `var_others` | extra names passed through to `IterRslt` |
-| `model[/_init]` | the residual equations; `model(<cond>)` for conditional regions |
+| `model[/_init]` | the model body: assignments (supports `if/elseif/else/end`) plus the `equations` block; `model(<guard>)` for conditional regions |
 | `equations` | the equation block (supports `if/else/end` on the shock value) |
 | `simulate` | the simulation step (policy updates, recorded paths) |
 | `pre_model`, `pre_iter`, `post_iter` | hooks run around the iteration |
@@ -65,6 +65,24 @@ the grids and parameters. The model-specific syntax sits on top.
 - **Conditional regions** (Phase 9b): `model(X>0)` / `model(X==0)` declare independent square systems
   selected per grid point by the state guard; inside `equations`, `if/else/end` on the shock value
   fills an equation slot by branch.
+- **Conditional statements**: `if/elseif/else/end` among the model-body assignments picks which
+  assignments run at a grid point. Nesting is allowed to any depth. See `tests/rbc/rbc_if.gmod`.
+
+  ```
+  if z > 1
+    Y = z*K^alpha;
+  elseif z > 0
+    Y = exp(log(z) + alpha*log(K));
+  else
+    Y = 0;
+  end
+  ```
+
+  Two rules (ADR-0003): a **guard** may reference only var_state, var_shock and parameters — never
+  a var_policy or a value computed in the body, so the branch cannot flip mid-solve; and an
+  ordinary `var_aux` must be assigned on **every** path (give the conditional an `else`), because
+  its output slot is written unconditionally. Conditional statements require the **adept**
+  backend; auto-mode selects it for you.
 - **Global var_aux — `GDSGE_DER(v, s)`**: declare a plain `var_aux` and define it *in the var_aux
   declaration section* (not the model block):
 

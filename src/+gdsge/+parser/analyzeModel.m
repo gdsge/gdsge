@@ -30,6 +30,10 @@ basePrimeable = [reshape(ir.shocks.names, 1, []), policyNames];  % + interp outp
 tensorNames = cellfun(@(t) t.name, ir.variables.tensor, 'UniformOutput', false);
 stateAllowed = [reshape(ir.states.names, 1, []), paramNames(ir)];
 shockAllowed = [reshape(ir.shocks.names, 1, []), paramNames(ir)];
+% Conditional-statement guards (ADR-0003): states, shocks and params — the same
+% vocabulary gdsge.codegen.cxx.lowerCondition accepts. Deliberately excludes
+% var_policy, so branch selection cannot change mid-solve.
+guardAllowed = unique([stateAllowed, shockAllowed]);
 
 nUnknown = 0;
 for i = 1:numel(ir.variables.policy)
@@ -59,63 +63,21 @@ for kR = 1:numel(ir.model.regions)
 
     known = baseKnown; primeable = basePrimeable;
     assigned = {};
-    for i = 1:numel(R.statements)
-        s = R.statements{i};
-        switch s.type
-            case 'assign'
-                checkGlobalTarget(s.target, auxGlobalNames, kR, i);
-                checkNames(s.expr, known, primeable, ...
-                    sprintf('region %d statement %d (assign %s)', kR, i, s.target));
-                known{end+1} = s.target; %#ok<AGROW>
-                assigned{end+1} = s.target; %#ok<AGROW>
-                if s.primed; primeable{end+1} = s.target; end %#ok<AGROW>
-            case 'reduction'
-                if ~(isfield(ir.shocks.transitions, s.transRef) || isSquareParam(ir, s.transRef))
-                    error('gdsge:parser:badTransRef', ...
-                        'region %d statement %d: reduction transition "%s" is not a declared transition matrix', ...
-                        kR, i, s.transRef);
-                end
-                checkGlobalTarget(s.target, auxGlobalNames, kR, i);
-                checkNames(s.body, known, primeable, ...
-                    sprintf('region %d statement %d (reduction %s)', kR, i, s.target));
-                known{end+1} = s.target; %#ok<AGROW>
-                assigned{end+1} = s.target; %#ok<AGROW>
-            case 'interpCall'
-                if strcmp(s.interpRef, 'GDSGE_INTERP_VEC')
-                    nDecl = numel(ir.variables.interp);
-                    if numel(s.targets) ~= nDecl
-                        error('gdsge:parser:interpArity', ...
-                            'region %d statement %d: GDSGE_INTERP_VEC has %d targets but %d var_interp are declared', ...
-                            kR, i, numel(s.targets), nDecl);
-                    end
-                elseif ~ismember(s.interpRef, ir.variables.interp)
-                    error('gdsge:parser:unknownInterp', ...
-                        'region %d statement %d: "%s" is not a declared var_interp', kR, i, s.interpRef);
-                else
-                    % Named-interp arity cross-check: call arg count must match
-                    % the declared interp's state-arg list.
-                    j = find(cellfun(@(x) strcmp(x.name, s.interpRef), ir.interp), 1);
-                    if ~isempty(j)
-                        nExpected = numel(ir.interp{j}.args);
-                        nGot      = numel(s.args);
-                        if nGot ~= nExpected
-                            error('gdsge:parser:interpArity', ...
-                                'region %d statement %d: interp "%s" expects %d arg(s) but got %d', ...
-                                kR, i, s.interpRef, nExpected, nGot);
-                        end
-                    end
-                end
-                for a = 1:numel(s.args)
-                    checkNames(s.args{a}, known, primeable, ...
-                        sprintf('region %d statement %d (interp call)', kR, i));
-                end
-                for t = 1:numel(s.targets)
-                    checkGlobalTarget(s.targets{t}, auxGlobalNames, kR, i);
-                end
-                known = [known, reshape(s.targets, 1, [])]; %#ok<AGROW>
-                assigned = [assigned, reshape(s.targets, 1, [])]; %#ok<AGROW>
-                primeable = [primeable, reshape(s.targets, 1, [])]; %#ok<AGROW>
-        end
+    [known, primeable, assigned] = walkStatements(R.statements, '', ...
+        known, primeable, assigned, ir, auxGlobalNames, kR, guardAllowed);
+
+    % Conditionally-assigned var_aux (ADR-0003 / Q5): the C++ emit exports
+    % GDSGE_AUX[slot] unconditionally, so an aux written on only some paths
+    % silently ships whatever the slot held. Plain temporaries may be
+    % branch-local; an aux may not.
+    condAux = intersect(auxNames, setdiff(possiblyAssigned(R.statements), ...
+                                          guaranteedAssigned(R.statements)));
+    if ~isempty(condAux)
+        error('gdsge:parser:auxConditionallyAssigned', ...
+            ['var_aux assigned on only some branches of a conditional statement ' ...
+             '(region %d): %s. An ordinary var_aux must be assigned on every ' ...
+             'path — give the conditional an "else", or assign it before the ' ...
+             '"if".'], kR, strjoin(condAux, ', '));
     end
 
     % Every ordinary var_aux must be assigned in every region: the C++ emit
@@ -156,6 +118,132 @@ end
 
 if isfield(ir, 'modelInit')
     analyzeInit(ir);
+end
+end
+
+% ---- statement walk (recursive over conditional statements) ---------------
+function [known, primeable, assigned] = walkStatements(stmts, path, ...
+        known, primeable, assigned, ir, auxGlobalNames, kR, guardAllowed)
+% Resolve names and collect targets over a statement list. A conditional
+% statement (ADR-0003) checks each case against the state at ENTRY, so a case
+% cannot see names another case introduced; the union of every case's targets
+% becomes visible afterwards, matching the C++ emit (all model-body scalars are
+% declared once at the top of the lambda).
+for i = 1:numel(stmts)
+    s = stmts{i};
+    where = sprintf('%s%d', path, i);
+    switch s.type
+        case 'assign'
+            checkGlobalTarget(s.target, auxGlobalNames, kR, where);
+            checkNames(s.expr, known, primeable, ...
+                sprintf('region %d statement %s (assign %s)', kR, where, s.target));
+            known{end+1} = s.target; %#ok<AGROW>
+            assigned{end+1} = s.target; %#ok<AGROW>
+            if s.primed; primeable{end+1} = s.target; end %#ok<AGROW>
+        case 'reduction'
+            if ~(isfield(ir.shocks.transitions, s.transRef) || isSquareParam(ir, s.transRef))
+                error('gdsge:parser:badTransRef', ...
+                    'region %d statement %s: reduction transition "%s" is not a declared transition matrix', ...
+                    kR, where, s.transRef);
+            end
+            checkGlobalTarget(s.target, auxGlobalNames, kR, where);
+            checkNames(s.body, known, primeable, ...
+                sprintf('region %d statement %s (reduction %s)', kR, where, s.target));
+            known{end+1} = s.target; %#ok<AGROW>
+            assigned{end+1} = s.target; %#ok<AGROW>
+        case 'interpCall'
+            if strcmp(s.interpRef, 'GDSGE_INTERP_VEC')
+                nDecl = numel(ir.variables.interp);
+                if numel(s.targets) ~= nDecl
+                    error('gdsge:parser:interpArity', ...
+                        'region %d statement %s: GDSGE_INTERP_VEC has %d targets but %d var_interp are declared', ...
+                        kR, where, numel(s.targets), nDecl);
+                end
+            elseif ~ismember(s.interpRef, ir.variables.interp)
+                error('gdsge:parser:unknownInterp', ...
+                    'region %d statement %s: "%s" is not a declared var_interp', kR, where, s.interpRef);
+            else
+                % Named-interp arity cross-check: call arg count must match
+                % the declared interp's state-arg list.
+                j = find(cellfun(@(x) strcmp(x.name, s.interpRef), ir.interp), 1);
+                if ~isempty(j)
+                    nExpected = numel(ir.interp{j}.args);
+                    nGot      = numel(s.args);
+                    if nGot ~= nExpected
+                        error('gdsge:parser:interpArity', ...
+                            'region %d statement %s: interp "%s" expects %d arg(s) but got %d', ...
+                            kR, where, s.interpRef, nExpected, nGot);
+                    end
+                end
+            end
+            for a = 1:numel(s.args)
+                checkNames(s.args{a}, known, primeable, ...
+                    sprintf('region %d statement %s (interp call)', kR, where));
+            end
+            for t = 1:numel(s.targets)
+                checkGlobalTarget(s.targets{t}, auxGlobalNames, kR, where);
+            end
+            known = [known, reshape(s.targets, 1, [])]; %#ok<AGROW>
+            assigned = [assigned, reshape(s.targets, 1, [])]; %#ok<AGROW>
+            primeable = [primeable, reshape(s.targets, 1, [])]; %#ok<AGROW>
+        case 'conditional'
+            entryKnown = known; entryPrimeable = primeable;
+            for c = 1:numel(s.cases)
+                validateCondition(s.cases{c}.cond, guardAllowed, ...
+                    sprintf('region %d statement %s case %d', kR, where, c));
+                [ck, cp, assigned] = walkStatements(s.cases{c}.statements, ...
+                    sprintf('%s.%d.', where, c), entryKnown, entryPrimeable, ...
+                    assigned, ir, auxGlobalNames, kR, guardAllowed);
+                known = unique([known, ck], 'stable');
+                primeable = unique([primeable, cp], 'stable');
+            end
+    end
+end
+end
+
+% ---- branch-assignment analysis (ADR-0003 / conditional var_aux) ----------
+function names = possiblyAssigned(stmts)
+% Every name assigned on ANY path through the list.
+names = {};
+for i = 1:numel(stmts)
+    s = stmts{i};
+    if strcmp(s.type, 'conditional')
+        for c = 1:numel(s.cases)
+            names = [names, possiblyAssigned(s.cases{c}.statements)]; %#ok<AGROW>
+        end
+    else
+        names = [names, stmtTargets(s)]; %#ok<AGROW>
+    end
+end
+names = unique(names);
+end
+
+function names = guaranteedAssigned(stmts)
+% Every name assigned on EVERY path through the list. A conditional without an
+% else contributes nothing (the no-branch path assigns nothing); with an else,
+% it contributes the intersection over its cases.
+names = {};
+for i = 1:numel(stmts)
+    s = stmts{i};
+    if strcmp(s.type, 'conditional')
+        if isempty(s.cases) || ~isempty(strtrim(s.cases{end}.cond)); continue; end
+        inner = guaranteedAssigned(s.cases{1}.statements);
+        for c = 2:numel(s.cases)
+            inner = intersect(inner, guaranteedAssigned(s.cases{c}.statements));
+        end
+        names = [names, reshape(inner, 1, [])]; %#ok<AGROW>
+    else
+        names = [names, stmtTargets(s)]; %#ok<AGROW>
+    end
+end
+names = unique(names);
+end
+
+function t = stmtTargets(s)
+switch s.type
+    case {'assign','reduction'}; t = {s.target};
+    case 'interpCall';           t = reshape(s.targets, 1, []);
+    otherwise;                   t = {};
 end
 end
 
@@ -213,6 +301,42 @@ else
 end
 end
 
+function known = walkInitStatements(stmts, path, known, primeable, ir, guardAllowed)
+% analyzeInit's statement walk; same conditional-statement recursion as
+% walkStatements, with the init tables (no interp, no aux slot export).
+for i = 1:numel(stmts)
+    s = stmts{i};
+    where = sprintf('%s%d', path, i);
+    switch s.type
+        case 'assign'
+            checkNames(s.expr, known, primeable, ...
+                sprintf('model_init statement %s (assign %s)', where, s.target));
+            known{end+1} = s.target; %#ok<AGROW>
+        case 'reduction'
+            if ~(isfield(ir.shocks.transitions, s.transRef) || isSquareParam(ir, s.transRef))
+                error('gdsge:parser:badTransRef', ...
+                    'model_init statement %s: reduction transition "%s" is not declared', ...
+                    where, s.transRef);
+            end
+            checkNames(s.body, known, primeable, ...
+                sprintf('model_init statement %s (reduction %s)', where, s.target));
+            known{end+1} = s.target; %#ok<AGROW>
+        case 'interpCall'
+            error('gdsge:parser:interpInInit', ...
+                'model_init statement %s: GDSGE_INTERP_VEC is not available in model_init', where);
+        case 'conditional'
+            entryKnown = known;
+            for c = 1:numel(s.cases)
+                validateCondition(s.cases{c}.cond, guardAllowed, ...
+                    sprintf('model_init statement %s case %d', where, c));
+                ck = walkInitStatements(s.cases{c}.statements, ...
+                    sprintf('%s.%d.', where, c), entryKnown, primeable, ir, guardAllowed);
+                known = unique([known, ck], 'stable');
+            end
+    end
+end
+end
+
 function analyzeInit(ir)
 % Same discipline as the main pass, with the init variable tables. The init
 % problem runs before any interpolant exists, so interp calls are an error;
@@ -225,28 +349,9 @@ auxNames = cellfun(@(a) a.name, ir.modelInit.variables.auxInit, 'UniformOutput',
 known = [known, reshape(polNames, 1, []), reshape(auxNames, 1, [])];
 primeable = reshape(ir.shocks.names, 1, []);
 
-stmts = ir.modelInit.statements;
-for i = 1:numel(stmts)
-    s = stmts{i};
-    switch s.type
-        case 'assign'
-            checkNames(s.expr, known, primeable, ...
-                sprintf('model_init statement %d (assign %s)', i, s.target));
-            known{end+1} = s.target; %#ok<AGROW>
-        case 'reduction'
-            if ~(isfield(ir.shocks.transitions, s.transRef) || isSquareParam(ir, s.transRef))
-                error('gdsge:parser:badTransRef', ...
-                    'model_init statement %d: reduction transition "%s" is not declared', ...
-                    i, s.transRef);
-            end
-            checkNames(s.body, known, primeable, ...
-                sprintf('model_init statement %d (reduction %s)', i, s.target));
-            known{end+1} = s.target; %#ok<AGROW>
-        case 'interpCall'
-            error('gdsge:parser:interpInInit', ...
-                'model_init statement %d: GDSGE_INTERP_VEC is not available in model_init', i);
-    end
-end
+guardAllowed = unique([reshape(ir.states.names, 1, []), ...
+                       reshape(ir.shocks.names, 1, []), paramNames(ir)]);
+known = walkInitStatements(ir.modelInit.statements, '', known, primeable, ir, guardAllowed);
 for i = 1:numel(ir.modelInit.equations)
     checkNames(ir.modelInit.equations{i}.expr, known, primeable, ...
         sprintf('model_init equation %d', i));
@@ -272,7 +377,7 @@ end
 function checkGlobalTarget(target, auxGlobalNames, kR, i)
 if ismember(target, auxGlobalNames)
     error('gdsge:parser:globalAuxAssignedInModel', ...
-        ['region %d statement %d: "%s" is a global var_aux (defined via ' ...
+        ['region %d statement %s: "%s" is a global var_aux (defined via ' ...
          'GDSGE_DER in the var_aux section) and must not be assigned in the ' ...
          'model block — it is constructed after each iteration.'], kR, i, target);
 end
@@ -301,6 +406,13 @@ if isfield(s, 'type')
         case 'interpCall'
             out = {};
             for a = 1:numel(s.args); out = [out, namesIn(s.args{a})]; end %#ok<AGROW>
+        case 'conditional'
+            out = {};
+            for c = 1:numel(s.cases)
+                % guard identifiers are text, checked separately by validateCondition
+                inner = s.cases{c}.statements;
+                for k = 1:numel(inner); out = [out, bodyNames(inner{k})]; end %#ok<AGROW>
+            end
         otherwise;        out = {};
     end
 else

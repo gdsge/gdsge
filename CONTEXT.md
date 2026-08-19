@@ -5,6 +5,31 @@ parsed into a JSON IR, from which MATLAB and C++ (MEX) solver code is generated.
 
 ## Language
 
+### Model structure
+
+**Model region**:
+One `model;` or `model(<guard>);` block. A model may declare several regions; at each
+grid point the toolbox runs the first region whose guard holds. Regions partition the
+state space — they do not compose.
+_Avoid_: conditional model, model branch
+
+**Conditional statement**:
+An `if/elseif/else/end` block among the assignments of a model body, selecting which
+assignments run at a grid point. Every case is part of the same region and fills the
+same equation slots.
+_Avoid_: model-body conditional, if block
+
+**Conditional equation**:
+An `if/elseif/else/end` block inside `equations;…end;`, selecting which residual
+expressions fill a slot range. Every case must fill the same number of slots.
+_Avoid_: equation branch, conditional residual
+
+**Guard**:
+The boolean expression that selects a case of a model region, a conditional statement,
+or a conditional equation. A guard may reference only var_state, var_shock, and
+parameters — never a var_policy or a value computed in the model body.
+_Avoid_: condition, branch condition, predicate
+
 ### Variables
 
 **Ordinary var_aux**:

@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-08-11
+
+### Added
+
+- **Conditional statements in the model body** — `if/elseif/else/end` around model-body
+  assignments is supported again (the old toolbox had it; the refactor had only the
+  `equations;…end;` form). Nesting to any depth. Restored narrower than the original on
+  two axes, both recorded in `docs/adr/0003-model-body-conditionals-are-guarded-and-adept-only.md`:
+  a **guard** may reference only var_state, var_shock and parameters (the old parser also
+  admitted var_policy, letting a branch flip mid-Newton-iteration and silently invalidating
+  the Jacobian), and the SymPy Jacobian backend rejects conditional statements
+  (`gdsge:codegen:sympyConditionalStmt`) with auto-mode steering such models to adept.
+  An ordinary `var_aux` assigned on only some branches is a parse error
+  (`gdsge:parser:auxConditionallyAssigned`) — its output slot is written unconditionally.
+  Tracked in the IR as the `conditional` statement kind (minor bump to **2.2.0**).
+  Example + gate: `tests/rbc/rbc_if.gmod`, which asserts both that the right branch runs
+  (a per-branch `branch_id` must equal the shock index in iter and simulate) and that the
+  branch-taken solution matches the branch-free `tests/rbc` golden.
+- `gdsge.parser.assemblePartialIR` reads `irVersion` from `gdsge.ir.schema()` instead of
+  repeating the literal, so the schema and the emitted IR cannot drift apart.
+
+### Fixed
+
+- **The `plugins/` folder is back in the package.** The old toolbox shipped
+  `gdsge/plugins/` with the two macOS mex compiler configurations
+  (`g++_maci64.xml`, `g++_maca64.xml`) and the Notepad++ syntax-highlighting
+  definition for `.gmod`/`.nmod` (`gdsge_notepad.xml`); the refactor never carried it
+  over, so `README_compiler_macOS*.md` pointed at a folder that did not exist and macOS
+  users had no g++ configuration to hand to `mex -setup -f`. The three files are
+  restored verbatim, now at the package root (`plugins/`, since the package root *is*
+  the repository root), and the two READMEs point there.
+
+### Known gaps
+
+- The old toolbox's other model-body constructs — `for` loops, `vector` declarations,
+  `cxx;…endcxx;` blocks, and `for` loops inside `equations;…end;` — remain unimplemented.
+  No `.gmod` in the corpus, old or new, uses any of them. See `docs/deferred-features.md`.
+
 ## [0.2.3] - 2026-08-10
 
 ### Added

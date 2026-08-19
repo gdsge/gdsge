@@ -15,7 +15,7 @@
   brew install gcc@8
   ```
 
-- Launch MATLAB, change directory to "gdsge/plugins". Run
+- Launch MATLAB, change directory to the toolbox's "plugins" folder. Run
   ```matlab
   mex -setup -f g++_maci64.xml
   ```

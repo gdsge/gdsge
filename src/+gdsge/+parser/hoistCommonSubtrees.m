@@ -207,6 +207,17 @@ switch s.type
         t = {s.target};
     case 'interpCall'
         t = s.targets;
+    case 'conditional'
+        % Barrier (ADR-0003): nothing is hoisted into or out of a branch, but
+        % everything any branch assigns must still be invalidated at the join.
+        t = {};
+        for c = 1:numel(s.cases)
+            inner = s.cases{c}.statements;
+            for k = 1:numel(inner)
+                t = [t, targetsOf(inner{k})]; %#ok<AGROW>
+            end
+        end
+        t = unique(t);
     otherwise
         t = {};
 end

@@ -2,7 +2,7 @@
 
 The JSON IR (`<model>.gdsge.json`) is the stable contract between the MATLAB front-end and the code
 generators: backends never re-parse `.gmod`. `gdsge.ir.schema().irVersion` carries a semantic
-version, currently **2.1.0**, and `gdsge.ir.decode` enforces major-version compatibility
+version, currently **2.2.0**, and `gdsge.ir.decode` enforces major-version compatibility
 (`gdsge:ir:incompatibleVersion`).
 
 ## Policy
@@ -32,5 +32,12 @@ version, currently **2.1.0**, and `gdsge.ir.decode` enforces major-version compa
 - **2.1.0** — global var_aux (GDSGE_DER). `variables` gains an optional `auxGlobal` list
   (`{name, op, of, wrt}`): aux defined by an operator over the whole solved function,
   constructed post-iteration, excluded from the `GDSGE_AUX` slot layout. Additive → minor.
+
+- **2.2.0** — conditional statements (ADR-0003). The `stmts` registry gains a
+  `conditional` entry (`{type, cases}`, each case `{cond, statements}`) for
+  `if/elseif/else/end` among the model-body assignments. Recursive, so nesting needs no
+  further shape. Additive → minor; existing models are unaffected beyond the version
+  string. `assemblePartialIR` now reads the version from `gdsge.ir.schema()` rather than
+  repeating the literal, so this file and the schema cannot drift apart again.
 
 See `docs/ir-schema.md` for the full field-by-field schema (auto-generated; no-drift tested).

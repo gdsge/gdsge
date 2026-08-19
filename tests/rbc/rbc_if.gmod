@@ -1,0 +1,84 @@
+% Conditional-statement variant of tests/rbc/rbc.gmod (ADR-0003): exercises
+% if/elseif/else/end among the model-body assignments.
+%
+% Two things are asserted by tests/rbc/codegen/tEndToEndRbcIf.m:
+%   1. branch selection — branch_id is set to a different constant in each
+%      case, so it must equal the shock index at every grid point and in every
+%      simulated period. Nothing but a correctly emitted branch produces that.
+%   2. numerical invariance — w, Y and MPK_analytical are computed by
+%      algebraically identical but textually different formulas in each branch,
+%      so the solution must match the branch-free rbc golden. The nested
+%      conditional inside the z<1 arm covers nesting (ADR-0003 allows any depth).
+%
+% Guards reference only var_shock z and parameters: the vocabulary
+% gdsge.codegen.cxx.lowerCondition accepts.
+parameters beta sigma alpha delta;
+beta  = 0.99;		% discount factor
+sigma = 2.0;		% CRRA coefficient
+alpha = 0.36;		% capital share
+delta = 0.025;		% depreciation rate
+
+% Exogenous variables
+var_shock z;
+z = [0.99, 1.01];
+shock_trans = [0.9, 0.1; 0.1, 0.9];
+shock_num = 2;
+
+% Endogenous variables
+var_state K;
+K = linspace(30,45,101);
+var_interp c_interp;
+initial c_interp z.*K.^alpha+(1-delta)*K;
+c_interp = c;
+var_policy K_next c;
+inbound K_next 0.1 50;
+inbound c 1e-3 50;
+var_aux w Y MPK_analytical branch_id;
+
+% Model
+model;
+  c_future' = c_interp'(K_next);
+  kret_next' = z'*alpha*K_next^(alpha-1) + 1-delta;
+  euler_residual = c^(-sigma) - beta*GDSGE_EXPECT{c_future'^(-sigma)*kret_next'};
+  market_clear = z*K^alpha + (1-delta)*K - c - K_next;
+
+  % Conditional statement: every arm is algebraically equal to the others.
+  % z = [0.99, 1.01], so the elseif arm serves z(1) and the if arm z(2); the
+  % else arm is unreachable but must still assign every var_aux (Q5) and
+  % proves the trailing `else` is emitted.
+  if z > 1
+    Y = z*K^alpha;
+    w = z*(1-alpha)*K^alpha;
+    MPK_analytical = alpha*z*K^(alpha-1);
+    branch_id = 2;
+  elseif z > 0
+    % nested conditional (any depth is allowed): arms again algebraically equal
+    if z > 0.5
+      Y = exp(log(z) + alpha*log(K));
+    else
+      Y = z*K^alpha;
+    end
+    w = (1-alpha)*Y;
+    MPK_analytical = alpha*Y/K;
+    branch_id = 1;
+  else
+    Y = z*K^alpha;
+    w = z*(1-alpha)*K^alpha;
+    MPK_analytical = alpha*z*K^(alpha-1);
+    branch_id = 0;
+  end
+
+  equations;
+    euler_residual;
+    market_clear;
+  end;
+end;
+
+simulate;
+  num_periods = 100;
+  num_samples = 24;
+  initial K 35;
+  initial shock 1;
+  var_simu c w Y MPK_analytical branch_id;
+  K' = K_next;
+end;

@@ -17,6 +17,9 @@ single source of truth for "what raises, where, and why".
 | `gdsge:codegen:globalAuxAsgUnsupported` | `+codegen/assertSupportedIR.m` | a global var_aux (`GDSGE_DER`) in an ASG model | `asg_mex` exposes no gradient command yet (`asg_adouble.h::eval_vec_with_grad` exists C++-side). Future. |
 | `gdsge:parser:globalAuxVectorUnsupported` | `+parser/parseDeclarations.m` | a sized (`[N]`) var_aux as `GDSGE_DER` target or source | Use length-1 variables. Future if a use case appears. |
 | `gdsge:simulate:noOutputInterp` | generated `simulate_<model>.m` (SIMU_RESOLVE) | global var_aux in `var_simu` but iter ran with `CONSTRUCT_OUTPUT=0` | Re-run `iter_<model>` with `CONSTRUCT_OUTPUT=1`. |
+| `gdsge:codegen:sympyConditionalStmt` | `+codegen/+cxx/+sympymodel/generate.m` | a conditional statement (model-body `if/else`) under an explicitly pinned SymPy backend | Use the adept backend (`UseAutoDiff=1` / `GDSGE_BACKEND=adept`). Auto-mode already steers there. ADR-0003. |
+| `gdsge:parser:badCondition` | `+parser/analyzeModel.m` | a guard referencing anything but a var_state, var_shock, or parameter | Hoist the test out of the model, or restructure so the branch depends only on exogenous state. ADR-0003. |
+| `gdsge:parser:auxConditionallyAssigned` | `+parser/analyzeModel.m` | an ordinary `var_aux` assigned on only some branches of a conditional statement | Give the conditional an `else`, or assign the aux before the `if`. |
 
 Internal "should never happen" invariants (`gdsge:codegen:sympyUnsupportedStmt`,
 `gdsge:codegen:unsupported` inside the model-body emitter) guard against malformed IR reaching a
@@ -30,6 +33,14 @@ backend; they are not user-facing deferrals and indicate a bug if hit.
 - **Phase 7e-full (remainder)** — C++-body `var_tensor` (the `POPN` path) and the
   `IterRslt.var_tensor` result field. The MATLAB-side `var_tensor` subset (ndgrid tensors feeding
   inbound bounds / initial interp) landed in Phase 9a.
+
+- **Old model-body constructs not restored with conditional statements** — the old
+  `gdsge_parser` also lowered `for <i>=<a>:<b>` loops, `vector <name>[<n>]` declarations, and
+  `cxx;…endcxx;` verbatim blocks inside a model body, plus `for` loops inside `equations;…end;`.
+  Only `if/elseif/else/end` was restored (2026-08-11). Each of the others needs its own IR shape
+  (loop counters, array temporaries, opaque text passthrough) and **no `.gmod` in the corpus, old
+  or new, uses any of them** — they surface as `gdsge:parser:badStatement`.
+- **SymPy Jacobians for conditional statements** — see ADR-0003; adept only for now.
 
 No corpus model exercises either, so neither blocks backward compatibility.
 

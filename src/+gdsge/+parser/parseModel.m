@@ -35,14 +35,15 @@ bodyText = strjoin(lines(1:eqOpen-1), sprintf('\n'));
 eqText   = strjoin(lines(eqOpen+1:eqClose-1), sprintf('\n'));
 
 % --- 2. model statements ----------------------------------------------------
+% splitStatements already breaks on newline OR ';' at bracket depth 0, so the
+% control lines of a conditional statement (`if <guard>` / `elseif` / `else` /
+% `end`) arrive as statements of their own; parseStatementList groups them.
 [bodyStmts, bodyLines] = gdsge.parser.splitStatements(bodyText);
-statements = {};
-counter = 0;
-for i = 1:numel(bodyStmts)
-    % bodyLines(i) seeds tokenize's lineOffset so tokens carry block-relative lines
-    toks = gdsge.parser.tokenize(bodyStmts{i}, bodyLines(i));
-    [stmtList, counter] = parseStatement(toks, counter);
-    statements = [statements, stmtList]; %#ok<AGROW>
+[statements, pos] = parseStatementList(bodyStmts, bodyLines, 1, 0);
+if pos <= numel(bodyStmts)
+    error('gdsge:parser:unexpectedEnd', ...
+        '"%s" without a matching "if" in the model body (line %d)', ...
+        strtrim(bodyStmts{pos}), bodyLines(pos));
 end
 statements = gdsge.parser.hoistCommonSubtrees(statements);
 
@@ -84,7 +85,7 @@ while i <= n
             elseif strcmp(tt, 'end') || strcmp(tt, 'end;')
                 i = i + 1; closed = true; break;
             else
-                cases{end}.lines{end+1} = lines{i}; %#ok<AGROW>
+                cases{end}.lines{end+1} = lines{i};
                 i = i + 1;
             end
         end
@@ -130,6 +131,74 @@ for q = 1:numel(stmts)
     e0 = parseEquation(toks);
     eqs{q} = struct('kind','plain','expr', e0.expr, 'primed', e0.primed);
 end
+end
+
+% ===== statement grouping (conditional statements) =========================
+function [statements, i, counter] = parseStatementList(stmts, lines, i, counter)
+% Consume stmts from index i, grouping if/elseif/else/end into 'conditional'
+% statements (ADR-0003). Returns the index of the first UNCONSUMED entry: a
+% branch stops at the 'elseif'/'else'/'end' that closed it (the caller inspects
+% and consumes it), so a leftover at top level is a control line with no "if".
+statements = {};
+while i <= numel(stmts)
+    t = strtrim(stmts{i});
+    if isElseIfLine(t) || strcmp(t, 'else') || isEndLine(t)
+        return
+    end
+    if isIfLine(t)
+        [cond, ok] = ifGuardOf(t);
+        if ~ok
+            error('gdsge:parser:emptyGuard', ...
+                '"if" with no guard in the model body (line %d)', lines(i));
+        end
+        cases = {};
+        openLine = lines(i);
+        i = i + 1;
+        while true
+            [caseStmts, i, counter] = parseStatementList(stmts, lines, i, counter);
+            cases{end+1} = struct('cond', cond, 'statements', {caseStmts}); %#ok<AGROW>
+            if i > numel(stmts)
+                error('gdsge:parser:unterminatedConditional', ...
+                    'conditional statement "if" (line %d) not closed by "end"', openLine);
+            end
+            t = strtrim(stmts{i});
+            if isEndLine(t); i = i + 1; break; end
+            % "else" must be last: a further case would emit a second C++ else
+            if isempty(cases{end}.cond)
+                error('gdsge:parser:caseAfterElse', ...
+                    '"%s" after "else" in a conditional statement (line %d)', t, lines(i));
+            end
+            if strcmp(t, 'else')
+                cond = '';
+            else
+                [cond, ok] = elseIfGuardOf(t);
+                if ~ok
+                    error('gdsge:parser:emptyGuard', ...
+                        '"elseif" with no guard in the model body (line %d)', lines(i));
+                end
+            end
+            i = i + 1;
+        end
+        statements{end+1} = struct('type','conditional','cases', {cases}); %#ok<AGROW>
+        continue
+    end
+    % lines(i) seeds tokenize's lineOffset so tokens carry block-relative lines
+    toks = gdsge.parser.tokenize(stmts{i}, lines(i));
+    [stmtList, counter] = parseStatement(toks, counter);
+    statements = [statements, stmtList]; %#ok<AGROW>
+    i = i + 1;
+end
+end
+
+function tf = isElseIfLine(t), tf = ~isempty(regexp(t, '^elseif\W', 'once')) || strcmp(t, 'elseif'); end
+function tf = isEndLine(t),    tf = strcmp(t, 'end') || strcmp(t, 'end;'); end
+
+function [c, ok] = ifGuardOf(t)
+c = strtrim(regexprep(t, '^if', '')); ok = ~isempty(c);
+end
+
+function [c, ok] = elseIfGuardOf(t)
+c = strtrim(regexprep(t, '^elseif', '')); ok = ~isempty(c);
 end
 
 % ===== statement classification ============================================

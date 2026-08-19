@@ -38,6 +38,14 @@ switch env
 end
 
 % (3) auto-detection
+% A conditional statement in the model body is adept-only (ADR-0003): steer
+% auto-mode away from SymPy before the smoothness check, so the reason
+% reported is the real one.
+if hasConditionalStmt(ir)
+    dec = struct('backend', 'autodiff', 'mode', 'auto', 'reason', ...
+        'model body has a conditional statement (SymPy backend unsupported, ADR-0003)');
+    return;
+end
 hit = nonSmoothIn(ir);
 if ~isempty(hit)
     dec = struct('backend', 'autodiff', 'mode', 'auto', 'reason', ...
@@ -47,6 +55,34 @@ elseif pyAvailableFn()
 else
     dec = struct('backend', 'autodiff', 'mode', 'auto', ...
         'reason', 'SymPy Python unavailable (run gdsge_setup_sympy)');
+end
+end
+
+function tf = hasConditionalStmt(ir)
+% True if any model or model_init statement list contains a conditional
+% statement. Deep-walks the same way scan() does, keyed on the 'type' tag.
+tf = false;
+if isfield(ir, 'model');     tf = walkCond(ir.model);     end
+if ~tf && isfield(ir, 'modelInit'); tf = walkCond(ir.modelInit); end
+end
+
+function tf = walkCond(x)
+tf = false;
+if iscell(x)
+    for i = 1:numel(x)
+        tf = walkCond(x{i});
+        if tf; return; end
+    end
+elseif isstruct(x)
+    for j = 1:numel(x)
+        s = x(j);
+        if isfield(s, 'type') && strcmp(s.type, 'conditional'); tf = true; return; end
+        names = fieldnames(s);
+        for i = 1:numel(names)
+            tf = walkCond(s.(names{i}));
+            if tf; return; end
+        end
+    end
 end
 end
 

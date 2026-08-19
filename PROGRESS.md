@@ -204,6 +204,16 @@ backward compatible. Build vertical-slice first on **HeatonLucas1996**, autodiff
   Example + gates: `tests/rbc/` (rbc + feedback variant; spline MPK matches the closed form
   to ~2.5e-9). Spec: `docs/superpowers/specs/2026-08-09-global-var-aux-gdsge-der.md`.
 
+- ☑ **Conditional statements in the model body** (done 2026-08-11) — `if/elseif/else/end`
+  around model-body assignments, restoring an old-toolbox feature the refactor lacked (only
+  the `equations;…end;` form existed). New IR statement kind `conditional` (minor bump
+  2.2.0), recursive so nesting is free. Guard vocabulary restricted to
+  states/shocks/params and the SymPy backend rejects it — both deliberate narrowings
+  recorded in ADR-0003. Example + gates: `tests/rbc/rbc_if.gmod`
+  (`tFrontEndRbcIf` + `tEndToEndRbcIf`). Still missing from the old model body: `for`,
+  `vector`, `cxx;…endcxx;`, and `for` inside `equations` — unused by every corpus model,
+  logged in `docs/deferred-features.md`.
+
 Each phase gets its own spec→plan→implement cycle (see `docs/superpowers/plans/`).
 
 ---

@@ -106,6 +106,16 @@ Options: `USE_SPLINE/USE_ASG/USE_PCHIP`, `INTERP_ORDER`, `ExtrapOrder`,
 `SIMU_RESOLVE/SIMU_INTERP`, `TolEq`, `SaveFreq`, `PrintFreq`, `NumThreads`, `AsgMaxLevel`,
 `AsgThreshold`, and more.
 
+**Control flow the old parser lowered to literal C++** — worth knowing before you conclude a
+construct "was never supported". In the **model body** (`gdsge_parser.m:2240-2295`):
+`if`/`elseif`/`else`/`end`, `for <i>=<a>[:<step>]:<b>`, `vector <name>[<n>]`, and
+`cxx;…endcxx;`. In the **equations region** (`gdsge_parser.m:2632-2712`): `if`/`elseif`/`else`/
+`end` (an `else` was *required*, and every branch had to fill the same number of slots) and
+`for` loops over equations. Of these the new toolbox implements the equations-region `if`
+(Phase 9b) and the model-body `if` (2026-08-11, ADR-0003 — narrower: guards are
+states/shocks/params only); the rest raise `gdsge:parser:badStatement`. **No `.gmod` in the
+old corpus used the model-body forms at all** — only CaoNie2016's equations-region `if`.
+
 ## Driving MATLAB headless
 
 `matlab -batch "<expr>"` runs and exits; the exit code reflects uncaught errors or an

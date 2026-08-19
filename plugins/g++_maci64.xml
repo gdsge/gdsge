@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config
+    Name="g++"
+    ShortName="g++"
+    Manufacturer="Apple"
+    Version="$CLANG_VERSION"
+    Language="C++"
+    Priority="A"
+    Location="$XCODE_DIR" >
+    <Details
+        CompilerExecutable="$CXX"
+        CompilerDefines="$DEFINES"
+        CompilerFlags="$CXXFLAGS"
+        OptimizationFlags="$CXXOPTIMFLAGS"
+        DebugFlags="$CXXDEBUGFLAGS"
+        IncludeFlags="$INCLUDE"
+        LinkerExecutable="$LDXX"
+        LinkerFlags="$LDFLAGS"
+        LinkerLibraries="$LINKLIBS"
+        LinkerOptimizationFlags="$LDOPTIMFLAGS"
+        LinkerDebugFlags="$LDDEBUGFLAGS"
+
+        CompilerDefineFormatter="-D%s"
+        LinkerLibrarySwitchFormatter="-l%s"
+        LinkerPathFormatter="-L%s"
+        />
+    <vars
+        CMDLINE100="$CXX -c $DEFINES $INCLUDE $CXXFLAGS $OPTIM $SRC -o $OBJ"
+        CMDLINE200="$LDXX $LDFLAGS $LINKOPTIM $LINKEXPORT $LINKEXPORTVER $LINKEXPORTCPP $OBJS $CXXLIBS $LINKLIBS -o $EXE"
+
+        CC="gcc-13"
+        CXX="g++-13"
+        DEFINES="$MATLABMEX"
+        MATLABMEX="-DMATLAB_MEX_FILE "
+        MACOSX_DEPLOYMENT_TARGET="10.15"
+        CFLAGS="-fno-common -arch x86_64 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -fno-exceptions -isysroot $ISYSROOT"
+        CXXFLAGS="$CFLAGS -std=c++14"
+        INCLUDE="-I&quot;$MATLABROOT/extern/include&quot; -I&quot;$MATLABROOT/simulink/include&quot;"
+        CXXOPTIMFLAGS="-O2 -fwrapv -DNDEBUG"
+        CXXDEBUGFLAGS="-g"
+
+        LD="$CC"
+        LDXX="$CXX"
+        LDFLAGS="-Wl,-twolevel_namespace -undefined error -arch x86_64 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -Wl,-syslibroot,$ISYSROOT -framework Cocoa $LDBUNDLE"
+        LDBUNDLE="-bundle "
+        LINKEXPORT="-Wl,-exported_symbols_list,&quot;$MATLABROOT/extern/lib/maci64/mexFunction.map&quot;"
+        LINKEXPORTVER="-Wl,-exported_symbols_list,&quot;$MATLABROOT/extern/lib/maci64/c_exportsmexfileversion.map&quot;"
+        LINKEXPORTCPP="-Wl,-U,_mexCreateMexFunction -Wl,-U,_mexDestroyMexFunction -Wl,-U,_mexFunctionAdapter -Wl,-exported_symbols_list,&quot;$MATLABROOT/extern/lib/maci64/cppMexFunction.map&quot;"
+        LINKLIBS="-L&quot;$MATLABROOT/bin/maci64&quot; -lmx -lmex -lmat -L&quot;$MATLABROOT/extern/bin/$ARCH&quot; -lMatlabDataArray -lMatlabEngine"
+        LDOPTIMFLAGS="-O"
+        LDDEBUGFLAGS="-g"
+
+        OBJEXT=".o"
+        LDEXT=".mexmaci64"
+        SETENV="CC=&quot;$CC&quot;
+                CXX=&quot;$CXX&quot;
+                CFLAGS=&quot;$CFLAGS $DEFINES&quot;
+                CXXFLAGS=&quot;$CXXFLAGS $DEFINES&quot;
+                COPTIMFLAGS=&quot;$CXXOPTIMFLAGS&quot;
+                CXXOPTIMFLAGS=&quot;$CXXOPTIMFLAGS&quot;
+                CDEBUGFLAGS=&quot;$CXXDEBUGFLAGS&quot;
+                CXXDEBUGFLAGS=&quot;$CXXDEBUGFLAGS&quot;
+                LD=&quot;$LD&quot;
+                LDXX=&quot;$LDXX&quot;
+                LDFLAGS=&quot;$LDFLAGS $LINKLIBS $LINKEXPORT&quot;
+                LDDEBUGFLAGS=&quot;$LDDEBUGFLAGS&quot;"
+    />
+    <client>
+        <engine
+            LINKLIBS="$LINKLIBS -leng -L&quot;$MATLABROOT/extern/bin/$ARCH&quot; -lMatlabDataArray -lMatlabEngine"
+            LDBUNDLE=""
+            LINKEXPORT=""
+            LINKEXPORTVER=""
+            LINKEXPORTCPP=""
+            LDEXT=""
+        />
+
+        <mbuild
+            CMDLINE150="$MATLABROOT/bin/maci64/macbundle $EXENAME &quot;$EXEDIR&quot;"
+            CMDLINE200="$LDXX $LDFLAGS $OBJS $LINKOPTIM $LINKEXPORT $CXXLIBS $LINKLIBS -o &quot;$EXEDIR$EXENAME.app/Contents/MacOS/$EXENAME&quot;"
+            MACOSX_DEPLOYMENT_TARGET="10.15"
+            CXXFLAGS="-fno-exceptions -fno-common -arch x86_64 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -isysroot $ISYSROOT -std=c++11"
+            DEFINES="-DUNIX -DX11 -DMACI64 -UMX_COMPAT_SC"
+            LDFLAGS="-arch x86_64 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -Wl,-syslibroot,$ISYSROOT $LDTYPE $LINKEXPORT -framework CoreFoundation -bind_at_load -stdlib=libc++"
+            LINKLIBS="-L&quot;$MATLABROOT/runtime/maci64&quot; -L&quot;$MATLABROOT/extern/bin/maci64&quot; -lMatlabDataArray -lMatlabCppSharedLib -lmwmclmcrrt"
+            INCLUDE="-I&quot;$MATLABROOT/extern/include&quot; -I&quot;$MATLABROOT/extern/include/cpp&quot;"
+            MATLABMEX=""
+            LDEXT=""
+            LINKEXPORT=""
+            LINKEXPORTVER=""
+            LINKEXPORTCPP=""
+            LDTYPE=""
+        />
+
+    </client>
+    <locationFinder>
+    <!--Check for faulty DEVELOPER_DIR environment variable -->
+    <DEVELOPER_DIR_CHECK>
+            <or>
+                <not>
+                    <envVarExists name="DEVELOPER_DIR" />
+                </not>
+                    <dirExists name="$$" diagnostic="The environment variable DEVELOPER_DIR indicates a folder that does not exist. Please correct or delete this variable before using MEX." />
+           </or>
+    </DEVELOPER_DIR_CHECK>
+
+    <!-- User needs to run "!sudo xcode-select -switch /Applications/Xcode.app/"
+         to configure xcrun.  This creates the file /usr/share/xcode-select/xcode_dir_path -->
+    <XCODE_DIR>
+        <and diagnostic="Xcode appears to be installed, but not configured. Run &quot;sudo xcode-select -switch &lt;path to Xcode.app&gt; &quot;. An example Xcode path is /Applications/Xcode11.1.0.app. You must be an administrator of this computer to complete this action." >
+            <cmdReturns name="xcode-select -print-path" />
+            <dirExists name="$$" />
+        </and>
+    </XCODE_DIR>
+    <XCRUN_DIR>
+        <and>
+            <cmdReturns name="which xcrun" />
+            <dirExists name="$$" />
+        </and>
+    </XCRUN_DIR>
+    <ISYSROOT>
+        <cmdReturns name="xcrun -sdk macosx --show-sdk-path"/>
+    </ISYSROOT>
+    <SDKVER>
+        <cmdReturns name="xcrun -sdk macosx --show-sdk-version | awk 'BEGIN {FS=&quot;.&quot;} ; {print $1&quot;.&quot;$2}'"/>
+    </SDKVER>
+    <CLANG_VERSION>
+        <cmdReturns name="clang --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]'|head -1"/>
+    </CLANG_VERSION>
+</locationFinder>
+<env INCLUDE="$XCODE_DIR/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1;$XCODE_DIR/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/$CLANG_VERSION/include;$XCODE_DIR/Toolchains/XcodeDefault.xctoolchain/usr/include;$ISYSROOT/usr/include;$ISYSROOT/System/Library/Frameworks"/> 
+</config>

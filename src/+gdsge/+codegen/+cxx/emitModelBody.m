@@ -16,8 +16,14 @@ for iP = 1:numel(ir.params)
 end
 w = gdsge.codegen.codeWriter();
 mbody = gdsge.codegen.cxx.modelBody(ir);
-for i = 1:numel(mbody.statements)
-    st = mbody.statements{i};
+emitStatements(w, mbody.statements, ir, V, n, numInterp, transNames);
+txt = w.str();
+end
+
+function emitStatements(w, stmts, ir, V, n, numInterp, transNames)
+import gdsge.codegen.cxx.emitExpr
+for i = 1:numel(stmts)
+    st = stmts{i};
     switch st.type
         case 'interpCall'
             if ~st.primed
@@ -89,10 +95,27 @@ for i = 1:numel(mbody.statements)
             else
                 w.add('%s=%s;', st.target, emitExpr(st.expr, V.ctx));
             end
+        case 'conditional'
+            % ADR-0003: guards are states/shocks/params only, so the branch
+            % taken is fixed for the whole solve at this grid point; adept
+            % tapes the branch it runs. Targets are already declared at the
+            % top of the lambda by modelVars, so a branch only assigns.
+            for c = 1:numel(st.cases)
+                guard = gdsge.codegen.cxx.lowerCondition(st.cases{c}.cond, ir);
+                if c == 1
+                    w.add('if (%s)', guard);
+                elseif isempty(strtrim(st.cases{c}.cond))
+                    w.add('else');
+                else
+                    w.add('else if (%s)', guard);
+                end
+                w.add('{');
+                emitStatements(w, st.cases{c}.statements, ir, V, n, numInterp, transNames);
+                w.add('}');
+            end
         otherwise
             error('gdsge:codegen:unsupported', ...
                 'model statement type %s: Phase 7b', st.type);
     end
 end
-txt = w.str();
 end
