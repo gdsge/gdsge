@@ -19,7 +19,7 @@ single source of truth for "what raises, where, and why".
 | `gdsge:simulate:noOutputInterp` | generated `simulate_<model>.m` (SIMU_RESOLVE) | global var_aux in `var_simu` but iter ran with `CONSTRUCT_OUTPUT=0` | Re-run `iter_<model>` with `CONSTRUCT_OUTPUT=1`. |
 | `gdsge:codegen:sympyConditionalStmt` | `+codegen/+cxx/+sympymodel/generate.m` | a conditional statement (model-body `if/else`) under an explicitly pinned SymPy backend | Use the adept backend (`UseAutoDiff=1` / `GDSGE_BACKEND=adept`). Auto-mode already steers there. ADR-0003. |
 | `gdsge:parser:badCondition` | `+parser/analyzeModel.m` | a guard referencing anything but a var_state, var_shock, or parameter | Hoist the test out of the model, or restructure so the branch depends only on exogenous state. ADR-0003. |
-| `gdsge:parser:auxConditionallyAssigned` | `+parser/analyzeModel.m` | an ordinary `var_aux` assigned on only some branches of a conditional statement | Give the conditional an `else`, or assign the aux before the `if`. |
+| `gdsge:parser:auxConditionallyAssigned` (**warning**) | `+parser/analyzeModel.m` | an ordinary `var_aux` assigned on only some branches of a conditional statement — it exports 0 on the other paths (old-toolbox behaviour; gdsge.com zlb_rep) | Give the conditional an `else`, or assign the aux before the `if`, to make the value explicit. |
 
 Internal "should never happen" invariants (`gdsge:codegen:sympyUnsupportedStmt`,
 `gdsge:codegen:unsupported` inside the model-body emitter) guard against malformed IR reaching a

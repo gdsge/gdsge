@@ -58,7 +58,12 @@ for i = 1:numel(body.statements)
     st = body.statements{i};
     switch st.type
         case 'interpCall'
-            assert(st.primed, 'sympy: unprimed interp call unsupported');
+            if ~st.primed
+                error('gdsge:codegen:sympyUnprimedInterp', ...
+                    ['the SymPy Jacobian backend does not support unprimed ' ...
+                     'GDSGE_INTERP_VEC(shock,...); use the adept backend ' ...
+                     '(UseAutoDiff=1 in the gmod, or GDSGE_BACKEND=adept).']);
+            end
             rows = addInterpCall(w, st, ir, rows, perShockBases);
         case 'reduction'
             rows = addReductionLoop(w, st, ir, rows, perShockBases, NX, sprintf('hr%d_', i));

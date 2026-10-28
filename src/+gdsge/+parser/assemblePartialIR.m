@@ -1,8 +1,10 @@
 function ir = assemblePartialIR(modelName, decl, sim, options, hooks, model, modelInit)
 % ASSEMBLEPARTIALIR  Combine front-end sections into a schema-valid IR.
 %   MODEL (statements + equations from parseModel) is optional; omitting it
-%   yields the Phase-2 partial IR (empty model body). Enforces the
-%   bounds-completeness semantic gate, then runs gdsge.ir.validate.
+%   yields the Phase-2 partial IR (empty model body). A policy with no
+%   inbound gets the old toolbox's silent default [0, 1e3] (made explicit in
+%   ir.bounds, with a notice); an init policy with no inbound_init errors.
+%   Then runs gdsge.ir.validate.
 if nargin < 6 || isempty(model)
     model = struct('regions', {{ struct('condition','', ...
         'statements', {{}}, 'equations', {{}}) }});
@@ -27,14 +29,21 @@ if ~isempty(modelInit)
     ir.modelInit = modelInit;
 end
 
-% semantic gate: every policy variable needs an inbound
+% old-toolbox parity: a policy variable without an inbound keeps the
+% allocation default GDSGE_LB=0 / GDSGE_UB=1e3 (gdsge.com rbc_simple)
 boundNames = cell(1, numel(decl.bounds));
 for i = 1:numel(decl.bounds); boundNames{i} = decl.bounds{i}.name; end
+defaulted = {};
 for i = 1:numel(decl.variables.policy)
     pn = decl.variables.policy{i}.name;
     if ~ismember(pn, boundNames)
-        error('gdsge:parser:missingBound', 'Policy variable "%s" has no inbound', pn);
+        ir.bounds{end+1} = struct('name', pn, 'lower', '0', 'upper', '1e3');
+        defaulted{end+1} = pn; %#ok<AGROW>
     end
+end
+if ~isempty(defaulted)
+    fprintf('No inbound for var_policy %s: using the default bounds [0, 1e3]\n', ...
+        strjoin(defaulted, ' '));
 end
 
 % semantic gate: every init policy variable needs an inbound_init

@@ -125,6 +125,8 @@ Generated from `src/+gdsge/+ir/schema.m` by `gdsge.ir.gendoc`. irVersion: `2.2.0
   - `postJacCode` : text (optional)
   - `cxx` : text (optional)
   - `cxxIncludes` : list of text (optional)
+  - `preSimulateIter` : text (optional)
+  - `postSimulateIter` : text (optional)
 
 ## AST nodes
 

@@ -1,10 +1,13 @@
 function frag = emitBounds(ir, mode)
 % EMITBOUNDS  Bound-related fragments from ir.bounds + policy slot layout.
 %   .init            GDSGE_LB/UB allocation + per-variable fills (iter)
-%   .initNoTensor    same, omitting fills that reference a var_tensor (simulate
-%                    pre-loop; tensors don't exist there yet)
-%   .tensorInit      only the tensor-referencing fills, stripped of the
-%                    GDSGE_TENSOR_ prefix (simulate per-period, after recompute)
+%   .initConstant    same, omitting per-point fills — those referencing a
+%                    state, shock or var_tensor (simulate pre-loop; the iter
+%                    GDSGE_TENSOR_* grids don't exist there)
+%   .perPeriod       only the per-point fills, in simulate form: state s ->
+%                    s(:)' (the per-period sample column), shock z -> its
+%                    per-sample value, tensor t -> t(:)' (simulate per-period,
+%                    after the state assignment and tensor recompute)
 %   .adaptiveWiden   in-loop widening      (old: min/max against SOL*factor)
 %   .adaptiveTight   UseAdaptiveBoundInSol (old: SOL/factor .. SOL*factor)
 %   .adaptiveSlots   row vector of adaptive slot indices (warmup LB/UB
@@ -25,6 +28,12 @@ for i = 1:numel(pol)
 end
 tnames = cellfun(@(t) t.name, ir.variables.tensor, 'UniformOutput', false);
 sNames = [ir.states.names, ir.shocks.names];
+pointNames = [sNames, tnames];
+% simulate per-period form: problems are samples, states are the per-period
+% columns, shocks are looked up by each sample's shock index
+simuReps = [cellfun(@(n) [n '(:)'''], ir.states.names, 'UniformOutput', false), ...
+    cellfun(@(n) ['reshape(IterRslt.var_shock.' n '(shock),1,[])'], ir.shocks.names, 'UniformOutput', false), ...
+    cellfun(@(n) [n '(:)'''], tnames, 'UniformOutput', false)];
 if strcmp(mode, 'asg')
     % ASG: per-problem columns are the proposed eval grids, not tensors.
     % (ASG + var_tensor is rejected, so no tensor names enter here.)
@@ -42,24 +51,22 @@ else
 end
 
 wInit = gdsge.codegen.codeWriter();
-wNoT  = gdsge.codegen.codeWriter();
-wTensor = gdsge.codegen.codeWriter();
+wConst = gdsge.codegen.codeWriter();
+wPoint = gdsge.codegen.codeWriter();
 allocLB = sprintf('GDSGE_LB = zeros(%d,GDSGE_NPROB);', maxDim);
 allocUB = sprintf('GDSGE_UB = 1e3*ones(%d,GDSGE_NPROB);', maxDim);
 wInit.add('%s', allocLB); wInit.add('%s', allocUB);
-wNoT.add('%s', allocLB);  wNoT.add('%s', allocUB);
+wConst.add('%s', allocLB);  wConst.add('%s', allocUB);
 wWiden = gdsge.codegen.codeWriter();
 wTight = gdsge.codegen.codeWriter();
 adaptiveSlots = [];
 for i = 1:numel(ir.bounds)
     b = ir.bounds{i};
     s = slotOf.(b.name);
-    lo = gdsge.codegen.mat.rewriteNames(b.lower, names, reps);
-    hi = gdsge.codegen.mat.rewriteNames(b.upper, names, reps);
-    addClassified(wInit, wNoT, wTensor, ...
-        sprintf('GDSGE_LB(%d:%d,:)=%s;', s(1), s(2), lo), refsTensor(b.lower, tnames));
-    addClassified(wInit, wNoT, wTensor, ...
-        sprintf('GDSGE_UB(%d:%d,:)=%s;', s(1), s(2), hi), refsTensor(b.upper, tnames));
+    addFill(wInit, wConst, wPoint, sprintf('GDSGE_LB(%d:%d,:)=', s(1), s(2)), ...
+        b.lower, names, reps, pointNames, simuReps);
+    addFill(wInit, wConst, wPoint, sprintf('GDSGE_UB(%d:%d,:)=', s(1), s(2)), ...
+        b.upper, names, reps, pointNames, simuReps);
     if isfield(b, 'adaptiveFactor') && ~isempty(b.adaptiveFactor)
         fct = mat2str(b.adaptiveFactor, 17);
         wWiden.add('GDSGE_LB(%d:%d,:)=min(GDSGE_LB(%d:%d,:),GDSGE_SOL(%d:%d,:)*%s);', ...
@@ -71,27 +78,29 @@ for i = 1:numel(ir.bounds)
         adaptiveSlots = [adaptiveSlots, s(1):s(2)]; %#ok<AGROW>
     end
 end
-frag = struct('init', wInit.str(), 'initNoTensor', wNoT.str(), ...
-    'tensorInit', wTensor.str(), 'adaptiveWiden', wWiden.str(), ...
+frag = struct('init', wInit.str(), 'initConstant', wConst.str(), ...
+    'perPeriod', wPoint.str(), 'adaptiveWiden', wWiden.str(), ...
     'adaptiveTight', wTight.str(), ...
     'adaptiveSlots', adaptiveSlots, 'maxDim', maxDim);
 end
 
-% A bound fill referencing a var_tensor goes to wInit (iter, full tensor form)
-% AND wTensor (simulate, stripped of GDSGE_TENSOR_); everything else goes to
-% wInit AND wNoT (so wInit stays byte-identical to the pre-Phase-9a output).
-function addClassified(wInit, wNoT, wTensor, line, isTensor)
-wInit.add('%s', line);
-if isTensor
-    wTensor.add('%s', strrep(line, 'GDSGE_TENSOR_', ''));
+% Every bound fill goes to wInit (iter, mode-rewritten form, byte-identical to
+% the pre-split output). A per-point fill (references a state, shock or
+% var_tensor) also goes to wPoint in simulate form; a constant fill to wConst.
+function addFill(wInit, wConst, wPoint, lhs, exprText, names, reps, pointNames, simuReps)
+wInit.add('%s', [lhs gdsge.codegen.mat.rewriteNames(exprText, names, reps) ';']);
+if refsAny(exprText, pointNames)
+    wPoint.add('%s', [lhs gdsge.codegen.mat.rewriteNames(exprText, pointNames, simuReps) ';']);
 else
-    wNoT.add('%s', line);
+    wConst.add('%s', [lhs exprText ';']);
 end
 end
 
-function tf = refsTensor(exprText, tnames)
+function tf = refsAny(exprText, nameList)
 tf = false;
-for i = 1:numel(tnames)
-    if ~isempty(regexp(exprText, ['\<' tnames{i} '\>'], 'once')); tf = true; return; end
+for i = 1:numel(nameList)
+    if ~isempty(regexp(exprText, ['(?<![A-Za-z0-9_])' regexptranslate('escape', nameList{i}) '(?![A-Za-z0-9_])'], 'once'))
+        tf = true; return;
+    end
 end
 end

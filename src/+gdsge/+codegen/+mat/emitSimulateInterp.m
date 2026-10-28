@@ -86,6 +86,10 @@ else
     w.add('GDSGE_SHOCK_VAR_INDEX_BASE = ([0:num_samples-1]'')*shock_num;');
     w.add('for GDSGE_t=1:num_periods');
     w.in();
+if ~isempty(gdsge.codegen.mat.simuHook(ir, 'pre'))
+        w.add('%% pre_simulate_iter');
+        w.addRaw(indent4(gdsge.codegen.mat.simuHook(ir, 'pre')));
+    end
     w.add('if EnforceSimuStateInbound==1');
     for i = 1:numel(ir.states.names)
         s = ir.states.names{i};
@@ -109,6 +113,10 @@ else
     w.blank();
     w.add('GDSGE_SHOCK_VAR_LINEAR_INDEX = SimuRslt.shock(:,GDSGE_t+1) + GDSGE_SHOCK_VAR_INDEX_BASE;');
     w.addRaw(indent4(simu.assign));
+if ~isempty(gdsge.codegen.mat.simuHook(ir, 'post'))
+        w.add('%% post_simulate_iter');
+        w.addRaw(indent4(gdsge.codegen.mat.simuHook(ir, 'post')));
+    end
     w.blank();
     w.add('if mod(GDSGE_t,SimuPrintFreq)==0');
     w.add('    fprintf(''Periods: %%d\\n'', GDSGE_t);');

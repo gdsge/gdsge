@@ -122,6 +122,8 @@ while true
     end
     name  = rest(1:sp-1);
     value = strtrim(rest(sp+1:end));
+    % old engine: a trailing ';' terminates the #define, it is not the value
+    if numel(value) > 1 && value(end) == ';'; value = strtrim(value(1:end-1)); end
     if isempty(regexp(name, '^[A-Za-z]\w*$', 'once'))
         error('gdsge:parser:macroDefineMalformed', ...
             'Invalid #define name "%s"', name);

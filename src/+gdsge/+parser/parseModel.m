@@ -295,9 +295,11 @@ end
 % ===== embedded named-interp hoisting ======================================
 function [icStmts, rest, counter] = hoistEmbeddedInterp(rest, counter)
 % Repeatedly hoist a named-interp call name'(args) that appears embedded in a
-% larger RHS (not the whole RHS, not inside reduction braces) into a generated
+% larger RHS (not the whole RHS; reduction braces included — gdsge.com
+% rbc_simple: GDSGE_EXPECT{c_interp'(K_next)^(-sigma)*...}) into a generated
 % GDSGE_INTERP_<n>' = name'(args) interpCall, replacing the span with the
-% primed token GDSGE_INTERP_<n>'.
+% primed token GDSGE_INTERP_<n>'. The call is per-shock either way, so
+% evaluating it before the statement is equivalent.
 icStmts = {};
 while true
     pos = findEmbeddedInterp(rest);
@@ -330,15 +332,11 @@ end
 end
 
 function pos = findEmbeddedInterp(rest)
-% Index of a name,prime,'(' triple at brace-depth 0 that is NOT the whole RHS
-% and not the multi-target GDSGE_INTERP_VEC; 0 if none.
-pos = 0; depth = 0;
+% Index of a name,prime,'(' triple (at any brace depth) that is NOT the whole
+% RHS and not the multi-target GDSGE_INTERP_VEC; 0 if none.
+pos = 0;
 for i = 1:numel(rest)-2
-    if strcmp(rest(i).type, 'punct')
-        if strcmp(rest(i).text, '{'); depth = depth + 1; continue;
-        elseif strcmp(rest(i).text, '}'); depth = depth - 1; continue; end
-    end
-    if depth == 0 && strcmp(rest(i).type, 'name') ...
+    if strcmp(rest(i).type, 'name') ...
             && strcmp(rest(i+1).type, 'prime') ...
             && strcmp(rest(i+2).type, 'punct') && strcmp(rest(i+2).text, '(') ...
             && ~strcmp(rest(i).text, 'GDSGE_INTERP_VEC')
@@ -364,9 +362,10 @@ end
 
 % ===== interp call ==========================================================
 function s = parseInterpCall(toks)
-% [a',b',...] = GDSGE_INTERP_VEC'(arg1, arg2, ...)
+% [a',b',...] = GDSGE_INTERP_VEC'(arg1, arg2, ...)   future, per shock
+% [a,b,...]   = GDSGE_INTERP_VEC(shock|int, arg1, ...) current, one shock index
 p = 2;   % after '['
-targets = {};
+targets = {}; tPrimed = [];
 while true
     if ~strcmp(toks(p).type, 'name')
         error('gdsge:parser:badInterpCall', ...
@@ -374,12 +373,8 @@ while true
             toks(p).line, toks(p).col);
     end
     tname = toks(p).text; p = p + 1;
-    if ~strcmp(toks(p).type, 'prime')
-        error('gdsge:parser:badInterpCall', ...
-            'interp targets must be primed, e.g. [psn'',...] (line %d, col %d)', ...
-            toks(p).line, toks(p).col);
-    end
-    p = p + 1;
+    tPrimed(end+1) = strcmp(toks(p).type, 'prime'); %#ok<AGROW>
+    if tPrimed(end); p = p + 1; end
     targets{end+1} = tname; %#ok<AGROW>
     if strcmp(toks(p).type, 'punct') && strcmp(toks(p).text, ',')
         p = p + 1;
@@ -401,12 +396,13 @@ if ~(strcmp(toks(p).type, 'name') && strcmp(toks(p).text, 'GDSGE_INTERP_VEC'))
         toks(p).line, toks(p).col);
 end
 p = p + 1;
-if ~strcmp(toks(p).type, 'prime')
+primed = strcmp(toks(p).type, 'prime');
+if primed; p = p + 1; end
+if any(tPrimed ~= primed)
     error('gdsge:parser:badInterpCall', ...
-        'unprimed GDSGE_INTERP_VEC is not supported until Phase 7b (line %d, col %d)', ...
-        toks(p).line, toks(p).col);
+        'GDSGE_INTERP_VEC targets must be primed exactly when the call is (line %d)', ...
+        toks(1).line);
 end
-p = p + 1;
 if ~(strcmp(toks(p).type, 'punct') && strcmp(toks(p).text, '('))
     error('gdsge:parser:badInterpCall', 'expected "(" (line %d, col %d)', ...
         toks(p).line, toks(p).col);
@@ -426,7 +422,17 @@ while true
     end
 end
 expectEof(toks, p);
-s = struct('type','interpCall', 'targets',{targets}, 'primed',1, ...
+if ~primed
+    a1 = args{1};
+    isShock = strcmp(a1.kind, 'name') && strcmp(a1.id, 'shock');
+    isInt = strcmp(a1.kind, 'num') && a1.value == round(a1.value);
+    if ~(isShock || isInt)
+        error('gdsge:parser:badInterpCall', ...
+            'GDSGE_INTERP_VEC without prime must take first argument as "shock" or an integer (line %d)', ...
+            toks(1).line);
+    end
+end
+s = struct('type','interpCall', 'targets',{targets}, 'primed',double(primed), ...
            'args',{args}, 'interpRef','GDSGE_INTERP_VEC');
 end
 

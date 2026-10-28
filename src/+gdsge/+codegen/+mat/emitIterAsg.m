@@ -97,6 +97,10 @@ w.add('while(~stopFlag)');
 w.in();
 w.add('GDSGE_Iter = GDSGE_Iter+1;');
 w.blank();
+if ~isempty(gdsge.codegen.mat.iterHook(ir, 'pre'))
+    w.add('%% pre_iter');
+    w.addRaw(gdsge.codegen.mat.indentBy(gdsge.codegen.mat.iterHook(ir, 'pre'), '    '));
+end
 w.add('GDSGE_ASG_HANDLE = GDSGE_ASG_INTERP.objectHandle;');
 w.add('GDSGE_ASG_INTERP_NEW.reset();');       % NEW carries over from the previous rotation
 w.add('GDSGE_SOL_ASG_INTERP_NEW.reset();');
@@ -142,6 +146,10 @@ w.add('GDSGE_TMP_PP = GDSGE_ASG_INTERP_NEW; GDSGE_ASG_INTERP_NEW = GDSGE_ASG_INT
 w.add('GDSGE_SOL_ASG_INTERP = GDSGE_SOL_ASG_INTERP_NEW;');
 w.add('GDSGE_TMP_PP = GDSGE_SOL_ASG_INTERP_NEW; GDSGE_SOL_ASG_INTERP_NEW = GDSGE_SOL_ASG_INTERP_SPARE; GDSGE_SOL_ASG_INTERP_SPARE = GDSGE_TMP_PP;');
 w.blank();
+if ~isempty(gdsge.codegen.mat.iterHook(ir, 'post'))
+    w.add('%% post_iter');
+    w.addRaw(gdsge.codegen.mat.indentBy(gdsge.codegen.mat.iterHook(ir, 'post'), '    '));
+end
 w.add('stopFlag = GDSGE_Metric<TolEq || GDSGE_Iter>=MaxIter;');
 w.blank();
 w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsEndIter(GDSGE_RETRY_STATS, GDSGE_Iter);');

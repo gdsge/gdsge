@@ -7,7 +7,8 @@ function txt = emitSimulateAsg(ir)
 %   first-call + randomized restarts — exactly gdsge.runtime.solveProblems
 %   with useNearestNeighbor=false. Old parity notes: bounds come from the
 %   gmod inbound code only (no GDSGE_PROB widening — the ASG IterRslt has no
-%   GDSGE_PROB); both corpus models have setup-constant bounds.
+%   GDSGE_PROB); state/shock-valued bounds are refilled per period at the
+%   simulated point.
 bounds = gdsge.codegen.mat.emitBounds(ir);
 pack   = gdsge.codegen.mat.emitDataPack(ir);
 unpk   = gdsge.codegen.mat.emitSolUnpack(ir);
@@ -67,7 +68,7 @@ w.add('if any(SimuRslt.shock(:,1)>shock_num)');
 w.add('    error(''initial shock exceeds shock_num'');');
 w.add('end');
 w.blank();
-w.addRaw(bounds.init);
+w.addRaw(bounds.initConstant);   % state/shock-valued bounds filled per-period below
 w.blank();
 w.add('GDSGE_EQVAL = 1e20*ones(%d,GDSGE_NPROB);', bounds.maxDim);
 w.add('GDSGE_F = 1e20*ones(1,GDSGE_NPROB);');
@@ -86,6 +87,14 @@ w.in();
 w.add('shock = SimuRslt.shock(:,GDSGE_t);');
 for i = 1:numel(ir.states.names)
     w.add('%s=SimuRslt.%s(:,GDSGE_t);', ir.states.names{i}, ir.states.names{i});
+end
+if ~isempty(gdsge.codegen.mat.simuHook(ir, 'pre'))
+    w.add('%% pre_simulate_iter');
+    w.addRaw(indent4(gdsge.codegen.mat.simuHook(ir, 'pre')));
+end
+if ~isempty(bounds.perPeriod)
+    w.add('%% Bounds that depend on states/shocks, at the simulated point');
+    w.addRaw(bounds.perPeriod);
 end
 w.blank();
 % parity: simulate_resolve_asg_template.m line 78
@@ -129,6 +138,10 @@ w.addRaw(indent4(unpk.unpackAux));
 w.blank();
 w.add('GDSGE_SHOCK_VAR_LINEAR_INDEX = SimuRslt.shock(:,GDSGE_t+1) + GDSGE_SHOCK_VAR_INDEX_BASE;');
 w.addRaw(indent4(simu.assign));
+if ~isempty(gdsge.codegen.mat.simuHook(ir, 'post'))
+    w.add('%% post_simulate_iter');
+    w.addRaw(indent4(gdsge.codegen.mat.simuHook(ir, 'post')));
+end
 w.blank();
 w.add('if mod(GDSGE_t,SimuPrintFreq)==0');
 w.add('    fprintf(''Periods: %%d\\n'', GDSGE_t);');

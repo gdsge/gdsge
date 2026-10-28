@@ -27,8 +27,15 @@ for i = 1:numel(stmts)
     switch st.type
         case 'interpCall'
             if ~st.primed
-                error('gdsge:codegen:unsupported', ...
-                    'unprimed GDSGE_INTERP_VEC: Phase 7b');
+                % [a,b] = GDSGE_INTERP_VEC(shock|int, x...): one evaluation at
+                % the given shock index into current scalars (old generator)
+                args = cellfun(@(a) emitExpr(a, V.ctx), st.args, 'UniformOutput', false);
+                w.add('memset(INTERP_VEC_FLAG,true,sizeof(bool)*%d);', numInterp);
+                w.add('GDSGE_INTERP_VEC(int(%s),%s);', args{1}, strjoin(args(2:end), ','));
+                for t = 1:numel(st.targets)
+                    w.add('%s=GDSGE_INTERP_RSLT[%d];', st.targets{t}, t - 1);
+                end
+                continue
             end
             args = cellfun(@(a) emitExpr(a, V.ctxLoop), st.args, 'UniformOutput', false);
             if strcmp(st.interpRef, 'GDSGE_INTERP_VEC')

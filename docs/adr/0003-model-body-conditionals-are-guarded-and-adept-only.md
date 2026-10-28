@@ -31,3 +31,13 @@ auto-mode to adept for such models.
   Jacobian a supported configuration; and capping nesting at one level to match
   conditional equations — the recursive IR makes nesting free, so the cap would have
   been extra code buying nothing.
+
+## Amendment (2026-10-27) — a posted example uses model-body `if`
+
+The "never used in an old `.gmod`" premise was wrong: the gdsge.com ZLB example
+(`zlb_rep.gmod`) uses `if price_adj_func==PRICE_ADJ_FUNC_SQR ... end` — a parameter-only
+guard, so the guard rule holds — with no `else`, leaving the var_aux `priceAdjCost`
+unassigned when the guard is false. `gdsge:parser:auxConditionallyAssigned` is therefore
+a **warning**, not an error: every model-body scalar is declared `adouble x(0)`, so the
+skipped path exports a deterministic 0, which is what the old toolbox did.
+

@@ -1,7 +1,7 @@
 function V = modelVars(ir)
 % MODELVARS  Classify model-body variables for the C++ emitters.
-%   scalarTemps: unprimed assign targets + reduction targets (declared
-%       `adouble x(0)`), sorted unique.
+%   scalarTemps: unprimed assign targets + reduction targets + unprimed
+%       GDSGE_INTERP_VEC targets (declared `adouble x(0)`), sorted unique.
 %   futureVars: primed interpCall targets + primed assign targets (declared
 %       as per-shock `_GDSGE_GRID` arrays), sorted unique.
 %   ctx/ctxLoop: ready-made emitExpr contexts (outside / inside shock loop).
@@ -35,6 +35,8 @@ for i = 1:numel(stmts)
         case 'interpCall'
             if st.primed
                 futureVars = [futureVars, st.targets]; %#ok<AGROW>
+            else
+                scalarTemps = [scalarTemps, st.targets]; %#ok<AGROW>
             end
         case 'conditional'
             for c = 1:numel(st.cases)

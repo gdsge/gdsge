@@ -213,6 +213,38 @@ backward compatible. Build vertical-slice first on **HeatonLucas1996**, autodiff
   (`tFrontEndRbcIf` + `tEndToEndRbcIf`). Still missing from the old model body: `for`,
   `vector`, `cxx;…endcxx;`, and `for` inside `equations` — unused by every corpus model,
   logged in `docs/deferred-features.md`.
+- ☑ **gdsge.com examples as tests + simulate state-bound fix** (done 2026-10-27, branch
+  `fix/simulate-state-bounds`; the ASG work stays unmerged on `asg-warm-store` /
+  `asg-in-mex-loop-wip`). Trigger: the posted rbc example's
+  `inbound c 0 z.*K.^alpha+(1-delta)*K` broke `simulate_rbc` (iter's `GDSGE_TENSOR_*`
+  emitted pre-loop in simulate). Per-point bound fills are now evaluated each period at
+  the simulated state/shock (`emitBounds` `.initConstant` / `.perPeriod`). All 20 example
+  pages post code on-site: vendored verbatim in `tests/examples/` (`SOURCES.md`), driven
+  by each page's posted workflow/driver (`gdsgetest.runWebExample`, `runWebDriver`), tag
+  `WebExample`, opt-in via `run_tests('WebExamples')` (~20 min). Surfaced and fixed: iter
+  `pre_iter`/`post_iter` hooks silently dropped; interp kernel out-of-bounds read on a
+  2-point dim (warm-up of every 2-shock model; intermittent crash); unprimed
+  `GDSGE_INTERP_VEC`; inline interp in reductions; `pre/post_simulate_iter`; old defaults.
+  Coverage (✓ runs; ✗ known gap, assumption-skipped):
+
+  | Page | gmod(s) / driver | Status | Time |
+  |---|---|---|---|
+  | rbc | rbc, posted options override, rbc_simple | ✓ | 19 s |
+  | rbcIrr / Coleman1991 / Brumm2015 / Cao2018 / CaoNie2017 | gmod | ✓ | 8–19 s each |
+  | HL1996 | HL1996 + eval_euler_errors.m, consumption_share | ✓ | 25 s |
+  | Bianchi2011 | bianchi2011 (page workflow: shock_process.mat) | ✓ | 9 s |
+  | Bianchi2011 | planner | ✗ also fails on the old toolbox | — |
+  | GLSW2020 | gmod + main_simulate_irf.m | ✓ | 42 s |
+  | Huggett1997 | gmod + main.m (steady state + transition) | ✓ | 252 s |
+  | KM1997 | gmod ✓; IRF script ✗ (`myinterp_mex` not shipped) | ✓/✗ | 18 s |
+  | Mendoza2010 | page workflow (80×80 refine, crisis fraction ≈ 0.132) | ✓ | 36 s |
+  | safe_assets | gmod | ✓ | 13 s |
+  | simple_zlb | iter ✓; posted simulate fails on the old toolbox too | ✓ | 6 s |
+  | ZLB | main_zlb_rep.m | ✓ | 647 s |
+  | Cao2020 / KS1998 | var_tensor in the model body (Phase 7e-full) | ✗ | — |
+  | multi_country_rbc | model-body `vector` / `for` | ✗ | — |
+  | HL1996TFIter | model-language `pre_model`, `INTERP_VEC'[1:3]` | ✗ | — |
+  | Guvenen2009 | gmod calls `tauchen` (not shipped) | ✗ | — |
 
 Each phase gets its own spec→plan→implement cycle (see `docs/superpowers/plans/`).
 

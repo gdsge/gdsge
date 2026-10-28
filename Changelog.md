@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.5] - 2026-10-28
+
+### Fixed
+
+- **State/shock-dependent `inbound` in simulate** (gdsge.com rbc example:
+  `inbound c 0 z.*K.^alpha+(1-delta)*K`). `simulate_<model>` died with
+  `Unrecognized function or variable 'GDSGE_TENSOR_z'`: bound fills that name a state or
+  shock were emitted before the period loop in iter's tensor form. They are now evaluated
+  every period at each sample's simulated state and shock (the rule var_tensor bounds
+  already followed), in both the spline and ASG simulate variants.
+- **`pre_iter` / `post_iter` hooks were silently dropped** — parsed into the IR but never
+  written into `iter_<model>.m`. Now spliced at the old template positions; the old
+  `OUTPUT_CONSTRUCT_CODE` placeholder inside a hook expands to the output-interp
+  construction; option fields a hook reads (gdsge.com huggett1997: `T`, `r_t`, `w_t`)
+  are accepted.
+- **Interpolation kernel read out of bounds on a 2-point dimension at its knots**, which
+  `REUSE_WARMUP_SOL`'s transfer interpolant has for every 2-shock model: garbage warm
+  starts and intermittent access violations (huggett1997 transition loop).
+
+### Added
+
+- **Every gdsge.com example is a test.** All 20 example pages post their code on-site;
+  the files live verbatim under `tests/examples/` (`SOURCES.md`), each driven by its
+  page's posted workflow and posted driver scripts (tags `Slow`, `WebExample`).
+- Old-gmod idioms the posted examples rely on: inline named-interp calls inside
+  reductions; unprimed `GDSGE_INTERP_VEC(shock, x...)` (adept only); `pre_simulate_iter`
+  / `post_simulate_iter` hook blocks; `#define N 8;`; a simulate block without
+  `num_periods` (1000); a policy without `inbound` ([0, 1e3], with a notice); states
+  listed in `var_simu`.
+
+### Changed
+
+- A var_aux assigned on only some branches of a model-body `if` is a **warning**
+  (`gdsge:parser:auxConditionallyAssigned`), not an error: it exports 0 on the skipped
+  paths, as the old toolbox did (gdsge.com ZLB). ADR-0003 amended.
+
+### Known gaps
+
+- Posted examples that still do not run, each a `KNOWN GAP` (assumption-skip) test:
+  Cao2020KS and KS1998 (var_tensor in the model body), multi_country_rbc (model-body
+  `vector`/`for`), HL1996TFIter (model-language `pre_model` block,
+  `GDSGE_INTERP_VEC'[1:3]`), Guvenen2009 (calls `tauchen`, which the page does not
+  ship), the KM1997 IRF script (`myinterp_mex`, not shipped). Bianchi2011's planner
+  variant and simple_zlb's simulate block fail on the **old** toolbox too.
+- The 0.2.4 note that no `.gmod` uses model-body `for`/`vector` was wrong:
+  multi_country_rbc does.
+
 ## [0.2.4] - 2026-08-11
 
 ### Added

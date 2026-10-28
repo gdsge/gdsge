@@ -11,7 +11,7 @@ m      = ir.modelName;
 % MEX via GDSGE_SPLINE_VEC / GDSGE_PP_*, not GDSGE_DATA. So the pack is
 % loop-invariant and can be built ONCE — unless a pre_iter hook could mutate a
 % param, in which case keep the per-iteration rebuild.
-hoistData = ~(isfield(ir.hooks, 'preIter') && ~isempty(ir.hooks.preIter));
+hoistData = isempty(gdsge.codegen.mat.iterHook(ir, 'pre'));
 nAux   = 0;
 for i = 1:numel(ir.variables.aux); nAux = max(nAux, ir.variables.aux{i}.slot(2)); end
 interpNames = ir.variables.interp;                     % decl order
@@ -208,6 +208,10 @@ w.add('while(~stopFlag)');
 w.in();
 w.add('GDSGE_Iter = GDSGE_Iter+1;');
 w.blank();
+if ~isempty(gdsge.codegen.mat.iterHook(ir, 'pre'))
+    w.add('%% pre_iter');
+    w.addRaw(indent4(gdsge.codegen.mat.iterHook(ir, 'pre')));
+end
 if ~hoistData
     w.add('%s', pack.iterPack);
     w.blank();
@@ -253,6 +257,10 @@ end
 w.blank();
 w.addRaw(indent4(bounds.adaptiveWiden));
 w.blank();
+if ~isempty(gdsge.codegen.mat.iterHook(ir, 'post'))
+    w.add('%% post_iter');
+    w.addRaw(indent4(gdsge.codegen.mat.iterHook(ir, 'post')));
+end
 w.add('stopFlag = (isempty(GDSGE_Metric) || GDSGE_Metric<TolEq) || GDSGE_Iter>=MaxIter;');
 w.blank();
 w.add('[GDSGE_PP_CELL, GDSGE_SPLINE_VEC] = gdsge.runtime.constructSplines({%s}, %s, GDSGE_SIZE_STATE, INTERP_ORDER, EXTRAP_ORDER, NumThreads);', ...

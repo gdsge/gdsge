@@ -66,18 +66,19 @@ for kR = 1:numel(ir.model.regions)
     [known, primeable, assigned] = walkStatements(R.statements, '', ...
         known, primeable, assigned, ir, auxGlobalNames, kR, guardAllowed);
 
-    % Conditionally-assigned var_aux (ADR-0003 / Q5): the C++ emit exports
-    % GDSGE_AUX[slot] unconditionally, so an aux written on only some paths
-    % silently ships whatever the slot held. Plain temporaries may be
-    % branch-local; an aux may not.
+    % Conditionally-assigned var_aux (ADR-0003, amended): every model-body
+    % scalar is declared `adouble x(0)` at the top of the lambda, so an aux
+    % written on only some paths exports 0 on the others — what the old
+    % toolbox did (gdsge.com zlb_rep: `if price_adj_func==... priceAdjCost =
+    % ...; end`). Legal, but almost always an oversight: warn.
     condAux = intersect(auxNames, setdiff(possiblyAssigned(R.statements), ...
                                           guaranteedAssigned(R.statements)));
     if ~isempty(condAux)
-        error('gdsge:parser:auxConditionallyAssigned', ...
+        warning('gdsge:parser:auxConditionallyAssigned', ...
             ['var_aux assigned on only some branches of a conditional statement ' ...
-             '(region %d): %s. An ordinary var_aux must be assigned on every ' ...
-             'path — give the conditional an "else", or assign it before the ' ...
-             '"if".'], kR, strjoin(condAux, ', '));
+             '(region %d): %s. It is 0 on the paths that skip it; give the ' ...
+             'conditional an "else", or assign it before the "if", to make ' ...
+             'that explicit.'], kR, strjoin(condAux, ', '));
     end
 
     % Every ordinary var_aux must be assigned in every region: the C++ emit
@@ -185,7 +186,9 @@ for i = 1:numel(stmts)
             end
             known = [known, reshape(s.targets, 1, [])]; %#ok<AGROW>
             assigned = [assigned, reshape(s.targets, 1, [])]; %#ok<AGROW>
-            primeable = [primeable, reshape(s.targets, 1, [])]; %#ok<AGROW>
+            if s.primed   % unprimed GDSGE_INTERP_VEC targets are current scalars
+                primeable = [primeable, reshape(s.targets, 1, [])]; %#ok<AGROW>
+            end
         case 'conditional'
             entryKnown = known; entryPrimeable = primeable;
             for c = 1:numel(s.cases)

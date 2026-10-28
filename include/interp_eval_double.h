@@ -46,8 +46,13 @@ inline void hunt(double xx[], int n, double x, int* jlo)
         jm = (jhi + (*jlo)) >> 1;
         if (x >= xx[jm]) *jlo = jm; else jhi = jm;
     }
-    if (x == xx[n]) *jlo = n - 1;
-    if (x == xx[1]) *jlo = 1;
+    // 1-based knot fix-ups from the original; with n = xPts-2 they only map to
+    // a valid cell when n >= 1. On a 2-point dim (n == 0) they produced cells
+    // -1 / 1 and read coefficients outside the buffer — keep the bisection's 0.
+    if (n >= 1) {
+        if (x == xx[n]) *jlo = n - 1;
+        if (x == xx[1]) *jlo = 1;
+    }
 }
 
 inline double receval4(double* coefs, int* coefsSize, int xDim, int idim,

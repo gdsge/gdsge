@@ -5,11 +5,13 @@ function out = splitBlocks(cleanText)
 %     .blocks.<name>      raw text of each top-level block (opener/closer removed)
 %   Block openers (depth-tracked, so nested equations; ... end; is retained
 %   inside model): model simulate model_init pre_model pre_iter post_iter
-%   pre_jac_code post_jac_code equations. Closer: end; .
+%   pre_jac_code post_jac_code pre_simulate_iter post_simulate_iter
+%   equations. Closer: end; .
 %   NOTE (Phase-7c hardening): a standalone MATLAB control-flow `end;` inside a
 %   hook/model body would also match the closer; the core models do not hit this.
 openers = {'model','simulate','model_init','pre_model','pre_iter', ...
-           'post_iter','pre_jac_code','post_jac_code','equations'};
+           'post_iter','pre_jac_code','post_jac_code','pre_simulate_iter', ...
+           'post_simulate_iter','equations'};
 lines = regexp(cleanText, '\n', 'split');
 declLines = {};
 blocks = struct();

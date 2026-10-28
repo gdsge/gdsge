@@ -46,6 +46,11 @@ if hasConditionalStmt(ir)
         'model body has a conditional statement (SymPy backend unsupported, ADR-0003)');
     return;
 end
+if hasUnprimedInterpVec(ir)
+    dec = struct('backend', 'autodiff', 'mode', 'auto', 'reason', ...
+        'model body has an unprimed GDSGE_INTERP_VEC (SymPy backend unsupported)');
+    return;
+end
 hit = nonSmoothIn(ir);
 if ~isempty(hit)
     dec = struct('backend', 'autodiff', 'mode', 'auto', 'reason', ...
@@ -80,6 +85,31 @@ elseif isstruct(x)
         names = fieldnames(s);
         for i = 1:numel(names)
             tf = walkCond(s.(names{i}));
+            if tf; return; end
+        end
+    end
+end
+end
+
+function tf = hasUnprimedInterpVec(ir)
+% True if any model statement (conditional branches included) is an unprimed
+% GDSGE_INTERP_VEC call; model_init rejects interp calls outright.
+tf = false;
+if ~isfield(ir, 'model'); return; end
+for r = 1:numel(ir.model.regions)
+    tf = walkUnprimed(ir.model.regions{r}.statements);
+    if tf; return; end
+end
+end
+
+function tf = walkUnprimed(stmts)
+tf = false;
+for i = 1:numel(stmts)
+    s = stmts{i};
+    if strcmp(s.type, 'interpCall') && ~s.primed; tf = true; return; end
+    if strcmp(s.type, 'conditional')
+        for c = 1:numel(s.cases)
+            tf = walkUnprimed(s.cases{c}.statements);
             if tf; return; end
         end
     end

@@ -161,3 +161,24 @@ sequential compilation — that is **not a hang**.
   rank-1 update overhead exceeds the Jacobian-eval savings. **Caveat:** HL1996-specific —
   Broyden's payoff scales with Jacobian-eval cost and Newton-steps-per-solve, so a large,
   cold-started model could still benefit. See [[eigen-openmp-malloc-and-solve-dim]].
+
+## gdsge.com examples (tests/examples, 2026-10-27)
+
+- Every posted example lives verbatim under `tests/examples/<Page>/` (`SOURCES.md` maps
+  folders to URLs); `tWebExample<Page>.m` drives each through `gdsgetest.runWebExample`
+  or the page's posted workflow (`webExampleSetup` / `webExampleCheckIter` /
+  `webExampleCheckSimu`, `runWebDriver` for posted `.m` scripts). Tags `Slow`,
+  `WebExample`. Unsupported constructs are `assumeFail('KNOWN GAP: …')`, not failures.
+- **Simulate bounds rule.** `emitBounds` splits fills into `.initConstant` (pre-loop) and
+  `.perPeriod` (any fill naming a state, shock or var_tensor; simulate form: state
+  `s(:)'`, shock `reshape(IterRslt.var_shock.z(shock),1,[])`, tensor `t(:)'`), emitted
+  inside the period loop after the state assignment — it overrides the pre-loop
+  `UseAdaptiveBound` widest box for those rows. `GDSGE_TENSOR_*` never appears in any
+  simulate file (corpus invariant test in `tGenerateMatlab`). The old toolbox silently
+  dropped these lines (its `SIMU_INBOUND_CODE` placeholder was in no template).
+- Old-toolbox defaults the posted gmods rely on: `num_periods` 1000; a policy with no
+  `inbound` gets [0, 1e3]; a trailing `;` ends a `#define`; states in `var_simu` are
+  ignored; a var_aux assigned on only some `if` branches is 0 elsewhere (warning).
+- Several pages' gmods are not standalone: Bianchi2011's shocks are placeholders
+  (the page loads `shock_process.mat` into options), ZLB's entry point is
+  `main_zlb_rep.m`. Run the page's posted code, not the bare gmod.

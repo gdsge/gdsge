@@ -14,6 +14,9 @@ if ~isfield(sb.blocks, 'simulate')
 end
 sim = gdsge.parser.parseSimulate(sb.blocks.simulate);
 decl.variables = gdsge.parser.resolveOutputs(decl.variables, sim.varSimu, decl.states.names);
+% old toolbox: a state listed in var_simu just re-recorded it (gdsge.com
+% rbcIrr: var_simu z K ...); states are always in SimuRslt, so drop them
+sim.varSimu = sim.varSimu(~ismember(sim.varSimu, decl.states.names));
 
 if ~isfield(sb, 'modelRegions') || isempty(sb.modelRegions)
     error('gdsge:parser:missingModel', 'No model block found');
@@ -61,6 +64,15 @@ keys = fieldnames(map);
 for i = 1:numel(keys)
     if isfield(blocks, keys{i})
         h.(map.(keys{i})) = blocks.(keys{i});
+    end
+end
+% per-period simulate hooks: optional fields, present only when declared
+% (keeps every hook-free model's IR byte-identical)
+opt = struct('pre_simulate_iter','preSimulateIter', 'post_simulate_iter','postSimulateIter');
+keys = fieldnames(opt);
+for i = 1:numel(keys)
+    if isfield(blocks, keys{i})
+        h.(opt.(keys{i})) = blocks.(keys{i});
     end
 end
 end

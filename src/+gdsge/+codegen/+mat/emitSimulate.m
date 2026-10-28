@@ -95,11 +95,7 @@ w.add('if any(SimuRslt.shock(:,1)>shock_num)');
 w.add('    error(''initial shock exceeds shock_num'');');
 w.add('end');
 w.blank();
-if isempty(ir.variables.tensor)
-    w.addRaw(bounds.init);
-else
-    w.addRaw(bounds.initNoTensor);   % tensor-valued bounds filled per-period below
-end
+w.addRaw(bounds.initConstant);   % state/shock/tensor-valued bounds filled per-period below
 w.blank();
 w.add('%% Use the widest bounds seen during iteration (parity lines 205-209)');
 w.add('if UseAdaptiveBound==1');
@@ -125,6 +121,10 @@ w.add('shock = SimuRslt.shock(:,GDSGE_t);');
 for i = 1:numel(ir.states.names)
     w.add('%s=SimuRslt.%s(:,GDSGE_t);', ir.states.names{i}, ir.states.names{i});
 end
+if ~isempty(gdsge.codegen.mat.simuHook(ir, 'pre'))
+    w.add('%% pre_simulate_iter');
+    w.addRaw(indent4(gdsge.codegen.mat.simuHook(ir, 'pre')));
+end
 if ~isempty(ir.variables.tensor)
     w.blank();
     w.add('%% Reconstruct var_tensor for per-period bounds (stripped scalar form)');
@@ -135,7 +135,13 @@ if ~isempty(ir.variables.tensor)
         t = ir.variables.tensor{i};
         w.add('%s = %s;', t.name, t.expr);   % plain (un-prefixed) names = per-sample vectors
     end
-    w.addRaw(bounds.tensorInit);
+end
+if ~isempty(bounds.perPeriod)
+    % Per-point bounds at each sample's simulated state; overrides the
+    % pre-loop UseAdaptiveBound widest box for these rows.
+    w.blank();
+    w.add('%% Bounds that depend on states/shocks/tensors, at the simulated point');
+    w.addRaw(bounds.perPeriod);
 end
 w.blank();
 w.add('%% interp warm start for the solver (stacked uniform-order eval)');
@@ -209,6 +215,10 @@ end
 if ~isempty(simuGlobals); w.blank(); end
 w.add('GDSGE_SHOCK_VAR_LINEAR_INDEX = SimuRslt.shock(:,GDSGE_t+1) + GDSGE_SHOCK_VAR_INDEX_BASE;');
 w.addRaw(indent4(simu.assign));
+if ~isempty(gdsge.codegen.mat.simuHook(ir, 'post'))
+    w.add('%% post_simulate_iter');
+    w.addRaw(indent4(gdsge.codegen.mat.simuHook(ir, 'post')));
+end
 w.blank();
 w.add('GDSGE_RETRY_STATS = gdsge.runtime.retryStatsEndIter(GDSGE_RETRY_STATS, GDSGE_t);');
 w.add('if mod(GDSGE_t,SimuPrintFreq)==0');

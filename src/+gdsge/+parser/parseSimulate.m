@@ -28,9 +28,13 @@ for i = 1:numel(stmts)
     end
 end
 % Old-toolbox default: a simulate block that omits num_samples runs 2 samples
-% (Cao2011EZ relies on this). numPeriods has no default — it must be declared.
+% (Cao2011EZ relies on this); one that omits num_periods runs 1000
+% (params_template.m; gdsge.com simple_zlb relies on this).
 if isempty(sim.numSamples) || isnan(sim.numSamples)
     sim.numSamples = 2;
+end
+if isempty(sim.numPeriods) || isnan(sim.numPeriods)
+    sim.numPeriods = 1000;
 end
 end
 
